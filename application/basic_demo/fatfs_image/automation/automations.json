@@ -93,5 +93,51 @@
         }
       }
     ]
+  },
+  {
+    "id": "schedule_qq_cron_every_minute",
+    "description": "Send a QQ message every minute for the demo cron schedule.",
+    "enabled": true,
+    "ack": "qq cron every minute sent",
+    "match": {
+      "event_type": "schedule",
+      "event_key": "demo_cron_qq_every_minute",
+      "source_cap": "cap_scheduler",
+      "source_channel": "time",
+      "content_type": "trigger"
+    },
+    "actions": [
+      {
+        "type": "send_message",
+        "input": {
+          "channel": "qq",
+          "chat_id": "c2c:D49D721C39B08F751706A40AB8BEA53D",
+          "message": "msg from cron"
+        }
+      }
+    ]
+  },
+  {
+    "id": "schedule_qq_interval_every_3_minutes",
+    "description": "Send a QQ message every 3 minutes for the demo interval schedule.",
+    "enabled": true,
+    "ack": "qq interval every 3 minutes sent",
+    "match": {
+      "event_type": "schedule",
+      "event_key": "demo_interval_qq_every_3_minutes",
+      "source_cap": "cap_scheduler",
+      "source_channel": "time",
+      "content_type": "trigger"
+    },
+    "actions": [
+      {
+        "type": "send_message",
+        "input": {
+          "channel": "qq",
+          "chat_id": "c2c:D49D721C39B08F751706A40AB8BEA53D",
+          "message": "msg from interval"
+        }
+      }
+    ]
   }
 ]

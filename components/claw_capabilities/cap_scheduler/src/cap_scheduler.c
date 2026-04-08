@@ -127,6 +127,20 @@ static const claw_cap_group_t s_scheduler_group = {
     .descriptor_count = sizeof(s_scheduler_descriptors) / sizeof(s_scheduler_descriptors[0]),
 };
 
+static const char *cap_scheduler_kind_to_string_local(cap_scheduler_item_kind_t kind)
+{
+    switch (kind) {
+    case CAP_SCHEDULER_ITEM_ONCE:
+        return "once";
+    case CAP_SCHEDULER_ITEM_INTERVAL:
+        return "interval";
+    case CAP_SCHEDULER_ITEM_CRON:
+        return "cron";
+    default:
+        return "unknown";
+    }
+}
+
 static bool cap_scheduler_parse_session_policy_local(const char *value,
                                                      claw_event_session_policy_t *out_policy)
 {
@@ -301,6 +315,7 @@ static esp_err_t cap_scheduler_publish_entry_locked(cap_scheduler_entry_t *entry
     claw_event_t event = {0};
     char payload_json[CAP_SCHEDULER_PAYLOAD_LEN] = {0};
     esp_err_t err;
+    esp_err_t publish_err;
     int64_t planned_time_ms;
 
     if (!entry || !entry->occupied) {
@@ -340,25 +355,54 @@ static esp_err_t cap_scheduler_publish_entry_locked(cap_scheduler_entry_t *entry
     }
 
     entry->status = CAP_SCHEDULER_STATUS_RUNNING;
-    err = s_cap_scheduler.config.publish_event(&event);
+    publish_err = s_cap_scheduler.config.publish_event(&event);
+    err = publish_err;
     entry->last_fire_ms = now_ms;
-    entry->last_error_code = err;
-    if (err == ESP_OK) {
+    entry->last_error_code = publish_err;
+    if (publish_err == ESP_OK) {
         entry->last_success_ms = now_ms;
         entry->run_count++;
     }
 
-    if (err == ESP_OK && entry->item.kind == CAP_SCHEDULER_ITEM_ONCE) {
+    if (publish_err == ESP_OK && entry->item.kind == CAP_SCHEDULER_ITEM_ONCE) {
         entry->next_fire_ms = -1;
         entry->status = CAP_SCHEDULER_STATUS_COMPLETED;
-    } else if (err == ESP_OK && entry->status != CAP_SCHEDULER_STATUS_PAUSED) {
+    } else if (publish_err == ESP_OK && entry->status != CAP_SCHEDULER_STATUS_PAUSED) {
         if (!immediate) {
             err = cap_scheduler_refresh_entry_locked(entry, planned_time_ms);
         } else {
             err = cap_scheduler_refresh_entry_locked(entry, now_ms);
         }
-    } else if (err != ESP_OK) {
+    } else if (publish_err != ESP_OK) {
         entry->status = CAP_SCHEDULER_STATUS_ERROR;
+    }
+
+    if (publish_err == ESP_OK) {
+        ESP_LOGI(TAG,
+                 "schedule triggered id=%s kind=%s immediate=%s planned_time_ms=%" PRId64
+                 " fire_time_ms=%" PRId64 " run_count=%d next_fire_ms=%" PRId64
+                 " event_type=%s event_key=%s",
+                 entry->item.id,
+                 cap_scheduler_kind_to_string_local(entry->item.kind),
+                 immediate ? "true" : "false",
+                 planned_time_ms,
+                 now_ms,
+                 entry->run_count,
+                 entry->next_fire_ms,
+                 entry->item.event_type,
+                 entry->item.event_key);
+    } else {
+        ESP_LOGW(TAG,
+                 "schedule trigger failed id=%s kind=%s immediate=%s planned_time_ms=%" PRId64
+                 " fire_time_ms=%" PRId64 " err=%s event_type=%s event_key=%s",
+                 entry->item.id,
+                 cap_scheduler_kind_to_string_local(entry->item.kind),
+                 immediate ? "true" : "false",
+                 planned_time_ms,
+                 now_ms,
+                 esp_err_to_name(publish_err),
+                 entry->item.event_type,
+                 entry->item.event_key);
     }
 
     return err;

@@ -46,5 +46,39 @@
     "payload_json": "{\"message\":\"one-shot schedule example\",\"kind\":\"once\"}",
     "catch_up_policy": "skip",
     "max_runs": 5
+  },
+  {
+    "id": "demo_cron_qq_every_minute",
+    "enabled": true,
+    "kind": "cron",
+    "timezone": "CST-8",
+    "cron_expr": "*/3 * * * *",
+    "event_type": "schedule",
+    "event_key": "demo_cron_qq_every_minute",
+    "source_channel": "time",
+    "chat_id": "c2c:D49D721C39B08F751706A40AB8BEA53D",
+    "content_type": "trigger",
+    "session_policy": "trigger",
+    "text": "QQ cron demo every minute",
+    "payload_json": "{\"message\":\"3 min trigger from cron\"}",
+    "catch_up_policy": "skip",
+    "max_runs": 0
+  },
+  {
+    "id": "demo_interval_qq_every_3_minutes",
+    "enabled": true,
+    "kind": "interval",
+    "timezone": "CST-8",
+    "interval_ms": 180000,
+    "event_type": "schedule",
+    "event_key": "demo_interval_qq_every_3_minutes",
+    "source_channel": "time",
+    "chat_id": "c2c:D49D721C39B08F751706A40AB8BEA53D",
+    "content_type": "trigger",
+    "session_policy": "trigger",
+    "text": "QQ interval demo every 3 minutes",
+    "payload_json": "{\"message\":\"3 min trigger from interval\"}",
+    "catch_up_policy": "fire_once",
+    "max_runs": 0
   }
 ]

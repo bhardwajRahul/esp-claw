@@ -89,14 +89,6 @@ static void cap_scheduler_localtime_wrapper(time_t seconds, struct tm *tm_info, 
     localtime_r(&seconds, tm_info);
 }
 
-static void cap_scheduler_timegm_wrapper(time_t seconds, struct tm *tm_info, void *user_ctx)
-{
-    time_t *out_epoch = (time_t *)user_ctx;
-
-    (void)seconds;
-    *out_epoch = mktime(tm_info);
-}
-
 static bool cap_scheduler_parse_cron_expr(const char *expr, cap_scheduler_cron_spec_t *out)
 {
     char buf[CAP_SCHEDULER_EXPR_LEN];
@@ -137,21 +129,6 @@ static bool cap_scheduler_parse_cron_expr(const char *expr, cap_scheduler_cron_s
     return index == 5 && token == NULL;
 }
 
-static int64_t cap_scheduler_timegm_ms(struct tm *tm_info)
-{
-    time_t epoch;
-
-    if (!tm_info) {
-        return -1;
-    }
-
-    cap_scheduler_with_timezone("UTC0", cap_scheduler_timegm_wrapper, 0, tm_info, &epoch);
-    if (epoch < 0) {
-        return -1;
-    }
-    return ((int64_t)epoch) * 1000LL;
-}
-
 static bool cap_scheduler_compute_next_cron_fire(const cap_scheduler_item_t *item,
                                                  int64_t anchor_ms,
                                                  int64_t *out_next_fire_ms)
@@ -180,9 +157,8 @@ static bool cap_scheduler_compute_next_cron_fire(const cap_scheduler_item_t *ite
             spec.mday[tm_info.tm_mday] &&
             spec.month[tm_info.tm_mon + 1] &&
             spec.wday[tm_info.tm_wday]) {
-            tm_info.tm_sec = 0;
-            *out_next_fire_ms = cap_scheduler_timegm_ms(&tm_info);
-            return *out_next_fire_ms >= 0;
+            *out_next_fire_ms = candidate_ms;
+            return true;
         }
         candidate_ms += 60000LL;
     }
