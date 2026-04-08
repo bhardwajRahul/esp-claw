@@ -20,6 +20,7 @@
 #include "cap_lua.h"
 #include "cap_mcp_client.h"
 #include "cap_mcp_server.h"
+#include "cap_session_mng.h"
 #include "cap_skill.h"
 #include "cap_time.h"
 #include "cap_web_search.h"
@@ -36,6 +37,7 @@ static const char *TAG = "app_clawgent";
 static const char *const BASIC_DEMO_LLM_VISIBLE_GROUPS[] = {
     "cap_cli",
     "cap_files",
+    "cap_skill",
 };
 
 #define BASIC_DEMO_MEMORY_SESSION_ROOT   "/fatfs/data/sessions"
@@ -185,6 +187,13 @@ static esp_err_t init_capabilities(const basic_demo_settings_t *settings)
     }),
     TAG,
     "Failed to whitelist event_router");
+    ESP_RETURN_ON_ERROR(cap_cli_register_command(&(cap_cli_command_t) {
+        .command_name = "lua",
+        .description = "List, write, and run managed Lua scripts",
+        .usage_hint = "lua --run --path hello.lua",
+    }),
+    TAG,
+    "Failed to whitelist lua");
     ESP_RETURN_ON_ERROR(cap_time_set_timezone(settings->time_timezone),
                         TAG,
                         "Failed to set time cap timezone");
@@ -303,6 +312,9 @@ static esp_err_t init_capabilities(const basic_demo_settings_t *settings)
     ESP_RETURN_ON_ERROR(cap_web_search_register_group(),
                         TAG,
                         "Failed to register web search cap");
+    ESP_RETURN_ON_ERROR(cap_session_mng_register_group(),
+                        TAG,
+                        "Failed to register session manager cap");
     ESP_RETURN_ON_ERROR(claw_cap_set_llm_visible_groups(
                             BASIC_DEMO_LLM_VISIBLE_GROUPS,
                             sizeof(BASIC_DEMO_LLM_VISIBLE_GROUPS) /
@@ -354,6 +366,7 @@ esp_err_t app_clawgent_start(const basic_demo_settings_t *settings)
         .core_submit_timeout_ms = 1000,
         .core_receive_timeout_ms = 130000,
         .default_route_messages_to_agent = false,
+        .session_builder = cap_session_mng_build_session_id,
     };
     bool llm_enabled = false;
 
@@ -364,6 +377,9 @@ esp_err_t app_clawgent_start(const basic_demo_settings_t *settings)
     llm_enabled = basic_demo_llm_is_configured(settings);
     router_config.default_route_messages_to_agent = llm_enabled;
 
+    ESP_RETURN_ON_ERROR(cap_session_mng_set_session_root_dir(BASIC_DEMO_MEMORY_SESSION_ROOT),
+                        TAG,
+                        "Failed to configure session manager");
     ESP_RETURN_ON_ERROR(claw_event_router_init(&router_config),
                         TAG,
                         "Failed to init event router");
