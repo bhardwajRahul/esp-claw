@@ -1,235 +1,198 @@
-# ESP-Clawgent
+# ESP-Claw: An AI Agent Framework for IoT Devices
+![LOGO](./docs/static/ESP-CLAW-LOGO.jpg)
 
-**事件驱动的 OpenClaw，为嵌入式场景量身定制。**
+<p align="center">
+  <a href="./README.md">English</a> |
+  <a href="./README_CN.md">中文</a> |
+  <a href="./README_JP.md">日本語</a>
+</p>
 
-`ESP-Clawgent` 是一套运行于 ESP32 上的事件驱动 AI assistant，适用于需要长期运行、可持续扩展、功能持续迭代的设备侧 AI 场景
+ESP-Claw is an AI agent framework purpose-built for IoT devices. Inspired by OpenClaw and redesigned for AIoT, it brings four key capabilities to the edge:
 
-- 事件驱动：不局限于消息输入，多种外部事件都可以触发 Agent Loop
-- 组件化：可按需裁切模块
-- 离线自动化：在无网络条件下执行本地规则
-- 自编程：内嵌 Lua 解释器，可由 AI 自主规划实现功能
-- 渐进式工具披露：当前 agent 能做什么，由已加载和已激活的 skills 决定
-- 超低资源占用：ESP32-C 系列上也能流畅运行
+- **Event-driven runtime:** Any event can trigger the Agent Loop or other actions, not just user messages
+- **Lua runtime:** Lets the LLM plan, refine, and hand off executable logic
+- **Structured memory management:** Keeps memory organized, persistent, and useful over time
+- **MCP and MCP bridging:** Connects both native MCP devices and traditional IoT hardware
 
-## 1. What is ESP-Clawgent
+## OpenClaw to ESP-Claw: From a Digital Brain to a Physical Agent
 
-项目包含示例与基础功能组件。
+PCs excel at software-heavy workflows and internet-native tasks. Embedded devices, by contrast, live much closer to the physical world. Their job is to **sense, process, communicate, and act**.
 
-- `application/basic_demo/`：当前主应用，用于将这些模块装配成可运行固件
+That is why moving the agent runtime from a PC or server onto an MCU is more than a deployment change. It is a shift in purpose.
 
-`components/` 包含以下核心部分：
+ESP-Claw is designed for embedded-side agent workloads. It brings an **LLM brain** for reasoning and decisions into a physical device, then pairs it with a **Lua cerebellum** for deterministic execution, **event reflexes** for real-time response, **MCP tentacles** for sensing and actuation, and a **structured memory vault** for long-term context. The result is an agent that is both responsive and capable.
 
-- `claw_core`：负责完整的 agent 执行流
-- `claw_cap`：负责能力注册、调度和工具调用
-- `claw_memory`：负责会话历史和长期记忆
-- `claw_skill`：负责技能加载、技能文档和激活态技能上下文
-- `claw_event_router`：负责标准事件接入、规则路由、Agent/脚本分发和出站路由
-- `cap_*`：负责拓展具体能力，比如 QQ、Telegram、文件、时间、Web Search、MCP、Lua 等
+| **Dimension** | **OpenClaw (PC/Server)** | **ESP-Claw (Embedded AIoT)** |
+| --- | --- | --- |
+| **Core scenario** | Software automation and digital task orchestration | Physical-world sensing, decision-making, communication, and control |
+| **Processing logic** | User request -> return result | External event -> execute action |
+| **Execution engine** | LLM-driven | Three-tier event handling: LLM + Lua + Router |
+| **Memory management** | Basic conversation context + long-term memory | Structured long-term memory engine (JSONL + summary tags) |
+| **Device protocol** | MCP Client | MCP as a unified language + multi-protocol bridging |
+| **Power consumption** | Tens of watts | 0.5 W, USB-powered 24/7 |
+| **Security** | Root/shell available, larger attack surface | No shell, no root, minimal attack surface |
 
-## 2. How it works
+![block](./docs/static/block.png)
 
-主启动入口位于 `application/basic_demo/main/main.c`。
+## Traditional AIoT vs. ESP-Claw: From Cloud-Centric to Edge-Native AI
 
-设备启动后，整体流程如下：
+ESP-Claw uses a chat-first interaction model. Users can switch model providers freely, and devices do not depend on a standalone app, a proprietary vendor cloud, or a closed ecosystem.
 
-1. 初始化 NVS，加载设备配置
-2. 挂载 FATFS 到 `/fatfs/data`
-3. 初始化 Wi-Fi 和本地 HTTP 配置服务
-4. 进入 `app_clawgent_start()`
-5. 初始化 event router、memory、skills、capabilities
-6. 初始化并启动 `claw_core`
-7. 启动 CLI，开始响应请求和事件
+| **Dimension** | **Traditional Model (Cloud-Centric)** | **ESP-Claw (Edge AI)** |
+| --- | --- | --- |
+| **Control center** | Cloud server | Edge node (ESP chip) |
+| **UI carrier** | Standalone app / control panel | IM chat (Feishu / WeChat / Telegram) |
+| **Inter-device communication** | Proprietary SDK / MQTT / Matter | MCP (unified Tool / Resource interface) |
+| **Interaction logic** | Preset automation (If-This-Then-That) | LLM intent understanding + autonomous decision-making |
+| **Extensibility** | High barrier to plugin development, closed ecosystem | Plug-and-play MCP Tools, community-driven expansion |
+| **Privacy** | Data uploaded to the cloud | All data stays local |
+| **Offline impact** | Intelligent features stop working | Local Lua rules and memory continue to run |
+| **Model binding** | Tied to a vendor AI service | Users can switch providers freely (Claude / GPT / Kimi) |
 
-当前运行时依赖以下本地目录：
+ESP-Claw follows a local-first memory architecture where **the device itself becomes the data center**. Personal routines, schedules, and household context remain on-device, bringing the risk of **privacy leakage** close to zero. More importantly, memory is not treated as a passive log. It becomes a system that can **learn from behavior**.
 
-- `/fatfs/data/sessions`：会话历史
-- `/fatfs/data/memory/MEMORY.md`：长期记忆
-- `/fatfs/data/skills`：skills 文档和清单
-- `/fatfs/data/lua`：Lua 脚本
-- `/fatfs/data/automation/automations.json`：自动化规则
-- `/fatfs/data/inbox`：消息附件存储目录
+ESP-Claw also brings Lua scripting into AIoT, challenging the old idea that hardware customization is only for experienced makers. With dynamic Lua loading and IM-based interaction, **ordinary users can shape device behavior as naturally as they chat**. Users buy hardware once, then define the software experience themselves. In that sense, every ESP-Claw device becomes a programmable canvas.
 
-### Event-driven
+## Multiple Deployment Forms: Standalone Devices and Multi-Device Gateways
 
-`ESP-Clawgent` 的核心是“收到事件，触发行为”。
+ESP-Claw can run in both **standalone smart devices** and **multi-device gateways**. Both share the same core agent stack, including the LLM thinker, Lua runtime, event scheduler, and structured memory vault. The difference lies in scope: standalone devices orchestrate onboard peripherals directly through GPIO/I2C, while gateways coordinate multiple devices through BLE discovery, a Shadow Server, and an event bus.
 
-事件可以来自：
+| **Dimension** | **Standalone Smart Device** | **Multi-Device Gateway** |
+| --- | --- | --- |
+| **Hardware** | ESP32-C series + onboard sensors/actuators | ESP32-P4 + C5 (flagship) / ESP32-S3 (lightweight) |
+| **Core responsibility** | Control onboard peripherals and complete the sense-decide-act loop | Manage multiple external IoT devices and unify heterogeneous protocols into MCP Tools |
+| **Device discovery** | Not required, peripherals are fixed on board (GPIO/I2C/SPI) | BLE ADV scanning + mDNS + Manifest parsing |
+| **Protocol/interface** | Lua calls hardware interfaces directly, no translation needed | Shadow Server generates virtual MCP Tools for legacy devices |
+| **Event model** | Peripheral interrupts / sensor callbacks -> Lua events | Local event bus (L1 immediate + L2 computed + L3 semantic) |
+| **Typical scenarios** | AI desktop companion, security sentry, chat-based programming | Smart home, building energy management, Zigbee integration |
+| **Shared core** | LLM thinker + Lua runtime + event scheduling + structured memory vault + IM interaction + local-first privacy | LLM thinker (L3) + Lua runtime (L2) + event scheduling (L1) + structured memory vault + IM chat interface |
 
-- 即时通讯入口
-- 配置界面
-- 本地事件规则
-- 文件或附件输入
-- 后续扩展的 cap 事件源
+**Standalone device architecture:**
 
-行为可以是：
+![Single Device](./docs/static/single_device.png)
 
-- 调模型
-- 调工具
-- 读写本地文件
-- 执行 Lua
-- 触发事件路由链路
-- 给外部 IM 回消息
+**Multi-device gateway architecture:**
 
-### Progressive tool exposure
+<!-- TODO: Replace with gateway architecture diagram -->
 
-工具不会默认一次性全部暴露给模型。
+---
 
-`claw_core` 在运行时会接入这些上下文提供器：
+## Technical Overview
 
-- 长期记忆
-- 会话历史
-- skills list
-- 已激活 skill 的文档
-- 当前 cap 工具描述
+The ESP-Claw stack spans five layers, from user-facing applications down to the hardware platform:
 
-初始情况下，仅暴露由 `skills_list.json` 声明的基础能力。
+| **Layer** | **Responsibility** | **Key components** |
+| --- | --- | --- |
+| Application layer | User-facing entry points | IM bot, MCP Client, plugin store, debug terminal |
+| Interaction layer | Message exchange and transport | Webhook, SSE event push, MCP JSON-RPC, token management |
+| Service and framework layer | Decision-making, execution, memory, device abstraction | AI subsystem, event subsystem, Lua subsystem, memory subsystem, protocol subsystem |
+| Kernel layer | Real-time runtime infrastructure | FreeRTOS, lwIP/TLS, peripheral drivers, FatFS |
+| Hardware layer | Chip platform and physical peripherals | ESP32-P4, C5, S3, C3/C2, sensors, actuators |
 
-- skill 没加载，模型看不到对应能力的说明
-- skill 没激活，模型拿不到对应文档上下文
-- 当前会话能做什么，是逐步展开的
+At the heart of ESP-Claw is the service and framework layer. This is where reasoning, execution, memory, and device abstraction come together.
 
+### LLM + Lua + Event Router: Intelligence with Determinism
 
-### Self-programming with Lua
+In IoT scenarios, actions such as smoke alarm linkage or shutting off a gas valve **must happen quickly and exactly as intended**. A purely LLM-driven system is powerful, but it is also non-deterministic and not ideal for hard real-time response. The same instruction may lead to different outcomes under different models or parameters. **That is exactly why ESP-Claw combines an event router with Lua.**
 
-项目内嵌 Lua 解释器，支持 Lua 脚本编辑与运行。
+ESP-Claw uses a three-level execution model:
 
-这使得以下能力成为可能：
+|  | **L1: Event Router** | **L2: Lua Runtime** | **L3: LLM Thinker** |
+| --- | --- | --- | --- |
+| **Role** | Deterministic events with no reasoning required | Local analysis and handlers | Non-deterministic reasoning engine |
+| **Latency / reproducibility** | Millisecond-level, 100% deterministic | Millisecond-level, 100% deterministic | Second-level, depends on model behavior |
+| **Offline / token usage** | Fully offline, no token cost | Fully offline, no token cost | Requires network, consumes tokens as needed |
 
-- 把设备逻辑写成 Lua
-- 把某些 agent 行为抽成脚本
-- 让 assistant 在现有能力之上继续组合出新的功能
+**Core mechanism - distilling L3 output into L2/L1 rules:** The key idea behind hierarchical event handling is that non-deterministic LLM output can, after user confirmation, be **solidified into deterministic, real-time rules and programs**. For example, if the LLM notices that a user turns off the lights at 23:00 for three nights in a row, it can suggest creating a Lua schedule rule. Once accepted, that rule runs directly at 23:00 every night without going through LLM inference again. Even if the model provider changes later, the accumulated behavior remains intact.
 
-许多扩展可以先在 Lua 层完成，无需重新烧录固件。只要向 LLM 提出具体需求，系统即可直接生成并实现对应功能。
+**Dynamic Lua loading** makes the device feel alive. New logic can be applied immediately without reflashing firmware. The firmware keeps the skeleton stable, while Lua allows the device behavior to evolve quickly. Scripts can also be pushed remotely, so device capabilities can be updated without physical access.
 
-## 3. Project architecture
+![event stream](./docs/static/event_stream.png)
 
-仓库结构如下：
+### MCP as a Unified Protocol: Making Every Device an AI-Native Tool
 
-```text
-esp-clawgent-master/
-├── components/
-│   ├── claw_core/
-│   ├── claw_cap/
-│   ├── claw_event_router/
-│   ├── claw_memory/
-│   ├── claw_skill/
-│   └── cap_*/
-└── application/
-    └── basic_demo/
-        ├── main/
-        └── build/
-```
+MCP (Model Context Protocol) is the common device language inside ESP-Claw. The gateway hides protocol differences from the agent, so what the agent sees is always a clean, standardized list of MCP Tools.
 
-### Runtime layers
+**Device onboarding happens in three steps:**
 
-- Application layer
-  负责启动、配置、文件系统、Wi-Fi、HTTP 配置页和整机装配
-- Core layer
-  `claw_core` 负责 agent 执行流
-- cap layer
-  `claw_cap` 和各类 `cap_*` 负责工具和具体能力实现
-- Event routing layer
-  `claw_event_router` 负责统一事件入口、规则匹配、脚本/agent 调度和出站分发
-- Memory layer
-  `claw_memory` 负责持久化上下文
-- Skill layer
-  `claw_skill` 负责按 skill 控制上下文与功能暴露
+1. **Discovery** - After power-on, the device broadcasts its capabilities over BLE ADV without requiring a connection. Wi-Fi devices can complement this with mDNS, and the gateway passively detects them.
+2. **Registration** - The gateway fetches the built-in JSON Manifest, automatically generates MCP Tools, and registers them in the tool list. OTA upgrades refresh the registration incrementally.
+3. **Execution** - The AI invokes standard MCP Tool Calls. After execution, the device updates its ADV broadcast within 10 ms, the gateway captures the new state, and pushes it to the agent over SSE, with an end-to-end latency of roughly 50-220 ms.
 
-### Current capabilities
+**Compatibility with existing devices:** For legacy devices that do not support MCP, such as Zigbee or Thread hardware, the gateway mounts an internal **Shadow Server** as a virtual MCP Server and uses Lua drivers for protocol translation. Supporting a new protocol only requires implementing and registering the standard `device_driver_t` interface. The core architecture remains unchanged.
 
-当前 `basic_demo` 已接入的能力包括：
+**AI-native semantics:** Tool names use a verb-noun pattern such as `turn_on` and `get_temperature`, while return values carry metadata such as units and freshness. This lets the AI understand and invoke tools without relying on external documentation. Once all devices are exposed through the same MCP abstraction, the agent can compose tools across devices and unlock **emergent multi-step behavior**.
 
-- `cap_im_qq`
-- `cap_im_tg`
-- `cap_files`
-- `cap_lua`
-- `cap_mcp_client`
-- `cap_mcp_server`
-- `cap_skill`
-- `cap_time`
-- `cap_llm_inspect`
-- `cap_web_search`
+### Local Memory System: From Session Memory to Long-Term Understanding
 
-### Design style
+Most AI agents are limited to the conversation window. Once the session ends, the memory is gone. ESP-Claw instead provides a full **structured long-term memory system** that runs locally on the device.
 
-项目的架构关键词包括：
+**Five memory types:** User profile (`profile`), user preferences (`preference`), factual knowledge (`fact`), device events (`event`), and behavioral rules (`rule`)
 
-- event-driven
-- componentized
-- local-first
+**Lightweight retrieval:** Instead of depending on a vector database, ESP-Claw uses **summary tags**. Each memory item is attached to one to three keywords. At retrieval time, the system injects the tag pool so the LLM can recall the relevant content on demand. This keeps memory lookup efficient even within MCU constraints.
 
-联网并不是系统运行的唯一前提。无网络时，本地事件路由、Lua、文件系统和既有记忆仍可继续工作。
+**Continuous evolution:** Memory grows through conversation extraction, event archiving, and behavior-to-rule refinement. More importantly, the LLM can detect recurring patterns and **proactively suggest new automation rules**.
 
-## 4. Quick Start
+![memory update](./docs/static/memory.png)
 
-### Prerequisites
+> **Privacy and data sovereignty:** All memory data is stored locally on the device in plain-text formats such as JSONL and Markdown. It is never uploaded to the cloud. Users can inspect, edit, or delete it at any time. Your device is your data center.
 
-- ESP-IDF 环境已安装并导出
-- 建议使用 `ESP-IDF v5.5.1`
-- 默认目标芯片为 `esp32s3`
+---
 
-```bash
-. /esp-idf/export.sh
-```
+## Use Cases
 
-### Build
+Users describe what they want in natural language. The LLM interprets the intent, coordinates sensors, screens, speakers, and servos, generates Lua scripts, and deploys them to the device for immediate execution. **Hardware is deployed once, but functionality can keep evolving. The user is not just operating the device, but defining what it can become.**
 
-所有 ESP-IDF 命令都在 `application/basic_demo/` 下执行：
+### Smart Home AI Assistant
 
-```bash
-cd application/basic_demo
-idf.py set-target esp32s3
-idf.py build
-```
+Imagine BLE temperature and humidity sensors working together with Wi-Fi smart lights. The user expresses an intent in natural language, the agent reads sensor data directly from the ADV cache without opening a BLE connection, and then controls the lights over Wi-Fi. No app, no account system, no cloud dependency. Everything runs locally.
 
-### Configure
+### AI Desktop Companion
 
-当前 Demo 的关键配置包括：
+A single ESP32-S3 with a screen, camera, BMI270 (accelerometer/gyroscope), BMM150 (magnetometer), microphone, speaker, and servo can become a desktop companion with a body, eyes, ears, a voice, facial expression, and an AI brain:
 
-- Wi-Fi SSID / Password
-- LLM API Key / Provider / Model
-- QQ App ID / App Secret
-- Telegram Bot Token
-- Brave / Tavily Search Key
-- Timezone
+- **A growing AI toy** -> Builds its own personality and memory as it grows with the user
+- **"Make me a shake-to-answer magic book"** -> Detects BMI270 shake events -> shows a random quote on screen + plays a short melody
+- **"I want a meeting guardian"** -> Detects sustained speech and starts timing -> if the meeting runs long, the screen expression shifts from focused to exhausted -> in extreme cases it proactively sends a rescue message
+- **"Build an anti-procrastination coach"** -> Starts a focus countdown -> detects when the user leaves the seat or gets distracted by the phone -> escalates reminders step by step
+- **"Turn into a smart sentry"** -> Wakes on BMI270 motion detection -> captures an image -> uses AI to assess danger level -> escalates audio warnings -> sends a report through chat
 
-可以通过 `menuconfig` 调整编译期默认值：
+### Plant and Pet Care
 
-```bash
-cd application/basic_demo
-idf.py menuconfig
-```
+- **Pet feeder:** Supports scheduled feeding or remote feeding through chat, monitors food level with sensors, and sends reminders proactively
+- **Plant watering:** Uses soil-moisture sensors and a relay-driven pump, while the LLM adjusts the watering strategy dynamically based on season and weather
 
-设备运行后，配置也会通过 NVS 持久化。
+### More Scenarios
 
-### Notes on Keys
+Relay control, music players, environmental monitoring, data visualization, and more. The full demo catalog covers 50+ scenarios across ten categories, including posture interaction, magnetometer-based interaction, audio processing, visual AI, multi-sensor fusion, timed automation, entertainment, and data visualization.
 
-- IM bot token：可通过 Telegram 的 [@BotFather](https://t.me/BotFather) 或 [QQ Bot](https://q.qq.com/qqbot/openclaw/login.html) 获取
-- LLM API key：可使用 [Anthropic Console](https://console.anthropic.com)、[OpenAI Platform](https://platform.openai.com) 或 [阿里云百炼](https://bailian.console.aliyun.com/#/api-key) 提供的 Key
+## How to Deploy and Use
 
+### Ready Out of the Box
 
-### Flash
+Setup and downloads are handled through a web interface. There is no need to compile firmware or install additional software just to flash and get started.
 
-```bash
-cd application/basic_demo
-idf.py flash monitor
-```
+Thanks to the modular architecture of ESP-BoardManager, the project can be adapted easily across different board-level configurations.
 
-如果串口不是默认值：
+### Build from Source
 
-```bash
-cd application/basic_demo
-idf.py flash monitor -p /dev/ttyUSB0
-```
+[Basic_demo](./application/basic_demo) provides a foundational example for development and testing. For build and flashing details, please refer to its [README](./application/basic_demo/README.md).
 
-### First boot
+### Notes
 
-首次启动后，通常会看到以下阶段：
+- The project is still under active development. If you run into issues, feel free to open an issue.
+- Features such as self-programming depend on strong reasoning models. GPT-5.4 or a model with similar capability is recommended for the best experience.
 
-- NVS 初始化
-- FATFS 挂载
-- 设置加载
-- Wi-Fi 和本地配置服务启动
-- memory / skills / capabilities 初始化
-- `claw_core` 启动
-- CLI 启动
+## Follow Us
+
+If this project helps or inspires you, a star would mean a lot.
+
+Community support is what keeps the project moving forward.
+
+## Acknowledgements
+
+ESP-Claw is inspired by [OpenClaw](https://github.com/openclaw/openclaw).
+
+Its implementation of Agent Loop and IM communication on embedded devices was also informed by [MimiClaw](https://github.com/memovai/mimiclaw).
+
+MimiClaw also helped demonstrate the feasibility of running OpenClaw-style agent workflows on ESP32-S3.
