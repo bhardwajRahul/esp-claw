@@ -1,198 +1,201 @@
 # ESP-Claw: An AI Agent Framework for IoT Devices
+
 ![LOGO](./docs/static/ESP-CLAW-LOGO.jpg)
 
-<p align="center">
+<p style="text-align: center;">
   <a href="./README.md">English</a> |
   <a href="./README_CN.md">中文</a> |
   <a href="./README_JP.md">日本語</a>
 </p>
 
-ESP-Claw is an AI agent framework purpose-built for IoT devices. Inspired by OpenClaw and redesigned for AIoT, it brings four key capabilities to the edge:
+**ESP-Claw** is an AI agent framework for IoT devices. With a modular architecture, it provides reusable agent capabilities and a runtime foundation for embedded systems. Built on the OpenClaw concept, ESP-Claw adds the following features:
 
-- **Event-driven runtime:** Any event can trigger the Agent Loop or other actions, not just user messages
-- **Lua runtime:** Lets the LLM plan, refine, and hand off executable logic
-- **Structured memory management:** Keeps memory organized, persistent, and useful over time
-- **MCP and MCP bridging:** Connects both native MCP devices and traditional IoT hardware
-
-## OpenClaw to ESP-Claw: From a Digital Brain to a Physical Agent
-
-PCs excel at software-heavy workflows and internet-native tasks. Embedded devices, by contrast, live much closer to the physical world. Their job is to **sense, process, communicate, and act**.
-
-That is why moving the agent runtime from a PC or server onto an MCU is more than a deployment change. It is a shift in purpose.
-
-ESP-Claw is designed for embedded-side agent workloads. It brings an **LLM brain** for reasoning and decisions into a physical device, then pairs it with a **Lua cerebellum** for deterministic execution, **event reflexes** for real-time response, **MCP tentacles** for sensing and actuation, and a **structured memory vault** for long-term context. The result is an agent that is both responsive and capable.
-
-| **Dimension** | **OpenClaw (PC/Server)** | **ESP-Claw (Embedded AIoT)** |
-| --- | --- | --- |
-| **Core scenario** | Software automation and digital task orchestration | Physical-world sensing, decision-making, communication, and control |
-| **Processing logic** | User request -> return result | External event -> execute action |
-| **Execution engine** | LLM-driven | Three-tier event handling: LLM + Lua + Router |
-| **Memory management** | Basic conversation context + long-term memory | Structured long-term memory engine (JSONL + summary tags) |
-| **Device protocol** | MCP Client | MCP as a unified language + multi-protocol bridging |
-| **Power consumption** | Tens of watts | 0.5 W, USB-powered 24/7 |
-| **Security** | Root/shell available, larger attack surface | No shell, no root, minimal attack surface |
+- **Event-driven:** Any event can trigger the Agent Loop and other actions, not just user messages
+- **Lua runtime:** Lets the LLM actively plan hardware logic and execution flows
+- **Structured memory management:** Organizes memories so they can accumulate and stay useful over time
+- **MCP communication:** Supports both standard MCP devices and traditional IoT hardware
+- **Ready out of the box:** Fast configuration through Board Manager with one-click flashing
+- **Modularized:** Every module can be included or trimmed on demand
 
 ![block](./docs/static/block.png)
 
-## Traditional AIoT vs. ESP-Claw: From Cloud-Centric to Edge-Native AI
+## Why ESP-Claw: From Cloud-Centric IoT to Edge AI
 
-ESP-Claw uses a chat-first interaction model. Users can switch model providers freely, and devices do not depend on a standalone app, a proprietary vendor cloud, or a closed ecosystem.
+When an ESP32 gains an Agent brain for reasoning, memory, and decision-making, then pairs it with a Lua cerebellum for orchestration, event nerves for real-time response, and MCP tentacles for sensing and execution, the device is no longer a cloud-dependent puppet. It becomes an independent intelligent agent that manages both data and decisions locally.
 
-| **Dimension** | **Traditional Model (Cloud-Centric)** | **ESP-Claw (Edge AI)** |
+- **Decentralized:** from an instruction receiver to an edge-side decision maker
+- **Standardized protocols:** eliminate protocol silos through MCP
+- **Localized data:** build a physical barrier for privacy
+- **Autonomous logic:** move from hard-coded behavior to a dynamic canvas
+
+The following table shows how ESP-Claw differs from traditional IoT devices:
+
+| **Dimension** | **Traditional IoT (Cloud-Centric)** | **ESP-Claw (Edge AI)** |
 | --- | --- | --- |
+| **Core scenario** | Device connectivity and remote control | Physical-world sensing, decision-making, and control |
+| **Processing logic** | Rule triggering (If-This-Then-That) | External event -> execute action |
+| **Execution engine** | Rule engine | LLM + Lua + Router (three-tier event handling) |
 | **Control center** | Cloud server | Edge node (ESP chip) |
-| **UI carrier** | Standalone app / control panel | IM chat (Feishu / WeChat / Telegram) |
-| **Inter-device communication** | Proprietary SDK / MQTT / Matter | MCP (unified Tool / Resource interface) |
-| **Interaction logic** | Preset automation (If-This-Then-That) | LLM intent understanding + autonomous decision-making |
-| **Extensibility** | High barrier to plugin development, closed ecosystem | Plug-and-play MCP Tools, community-driven expansion |
-| **Privacy** | Data uploaded to the cloud | All data stays local |
-| **Offline impact** | Intelligent features stop working | Local Lua rules and memory continue to run |
-| **Model binding** | Tied to a vendor AI service | Users can switch providers freely (Claude / GPT / Kimi) |
+| **Device protocol** | MQTT / Matter / proprietary SDK | MCP as a unified language + multi-protocol bridging |
+| **Inter-device communication** | Strong dependence on cloud relay | Direct local links + MCP abstraction |
+| **Memory management** | Cloud data storage | Local structured memory (JSONL + tags) |
+| **Interaction model** | App / control panel | IM chat (Telegram / WeChat / Feishu) |
+| **Extensibility** | Closed ecosystem, high development barrier | Plug-and-play MCP Tools |
+| **Intelligence** | Preset automation | LLM + local rules for physical closed loops |
 
-ESP-Claw follows a local-first memory architecture where **the device itself becomes the data center**. Personal routines, schedules, and household context remain on-device, bringing the risk of **privacy leakage** close to zero. More importantly, memory is not treated as a passive log. It becomes a system that can **learn from behavior**.
+## Event Router: Respond to Events, Drive Actions
 
-ESP-Claw also brings Lua scripting into AIoT, challenging the old idea that hardware customization is only for experienced makers. With dynamic Lua loading and IM-based interaction, **ordinary users can shape device behavior as naturally as they chat**. Users buy hardware once, then define the software experience themselves. In that sense, every ESP-Claw device becomes a programmable canvas.
+Unlike OpenClaw, which primarily reacts to user messages, embedded devices must handle many kinds of external events. Responding to those events and making decisions based on them is one of the core capabilities of ESP-Clawgent.
 
-## Multiple Deployment Forms: Standalone Devices and Multi-Device Gateways
+In this design, the passive executor concept of a **tool** is strengthened and extended into a **capability**, which works seamlessly with the LLM. A **capability** can both emit events and execute actions. For example:
 
-ESP-Claw can run in both **standalone smart devices** and **multi-device gateways**. Both share the same core agent stack, including the LLM thinker, Lua runtime, event scheduler, and structured memory vault. The difference lies in scope: standalone devices orchestrate onboard peripherals directly through GPIO/I2C, while gateways coordinate multiple devices through BLE discovery, a Shadow Server, and an event bus.
+- IM can deliver user commands, invoke the agent for processing, and send results back to the user
+- MCP can receive sensor data, ask the agent to analyze it, and then use MCP again to control actuators
+- Lua scripts can call the agent for analysis and store the results locally
 
-| **Dimension** | **Standalone Smart Device** | **Multi-Device Gateway** |
-| --- | --- | --- |
-| **Hardware** | ESP32-C series + onboard sensors/actuators | ESP32-P4 + C5 (flagship) / ESP32-S3 (lightweight) |
-| **Core responsibility** | Control onboard peripherals and complete the sense-decide-act loop | Manage multiple external IoT devices and unify heterogeneous protocols into MCP Tools |
-| **Device discovery** | Not required, peripherals are fixed on board (GPIO/I2C/SPI) | BLE ADV scanning + mDNS + Manifest parsing |
-| **Protocol/interface** | Lua calls hardware interfaces directly, no translation needed | Shadow Server generates virtual MCP Tools for legacy devices |
-| **Event model** | Peripheral interrupts / sensor callbacks -> Lua events | Local event bus (L1 immediate + L2 computed + L3 semantic) |
-| **Typical scenarios** | AI desktop companion, security sentry, chat-based programming | Smart home, building energy management, Zigbee integration |
-| **Shared core** | LLM thinker + Lua runtime + event scheduling + structured memory vault + IM interaction + local-first privacy | LLM thinker (L3) + Lua runtime (L2) + event scheduling (L1) + structured memory vault + IM chat interface |
+To coordinate events and actions among different **capabilities**, the system includes a built-in **event router**, while the agent can dynamically define routing rules.
 
-**Standalone device architecture:**
+![event_router](./docs/static/event_router.png)
 
-![Single Device](./docs/static/single_device.png)
+This makes tasks like the following possible:
 
-**Multi-device gateway architecture:**
+- Take photos on a schedule and sync them to an instant messaging app
+- Run precise LLM analysis when sensor data becomes abnormal, then send a report to your phone
 
-<!-- TODO: Replace with gateway architecture diagram -->
+## Lua Runtime: Self-Evolving Behavior
 
----
+ESP-Clawgent embeds a Lua interpreter. The agent can edit, debug, and run Lua scripts on the device, breaking away from the limits of fixed C-only behavior and making self-evolution possible on ESP32 for the first time. With just a natural-language request, ESP-Clawgent can generate animations or games, optimize control algorithms and parameters, and keep iterating over time.
 
-## Technical Overview
+The repository also provides rich built-in C peripheral bindings and graphics libraries for Lua, allowing users to combine them freely for higher efficiency and more creative applications.
 
-The ESP-Claw stack spans five layers, from user-facing applications down to the hardware platform:
+Try ideas like these:
 
-| **Layer** | **Responsibility** | **Key components** |
-| --- | --- | --- |
-| Application layer | User-facing entry points | IM bot, MCP Client, plugin store, debug terminal |
-| Interaction layer | Message exchange and transport | Webhook, SSE event push, MCP JSON-RPC, token management |
-| Service and framework layer | Decision-making, execution, memory, device abstraction | AI subsystem, event subsystem, Lua subsystem, memory subsystem, protocol subsystem |
-| Kernel layer | Real-time runtime infrastructure | FreeRTOS, lwIP/TLS, peripheral drivers, FatFS |
-| Hardware layer | Chip platform and physical peripherals | ESP32-P4, C5, S3, C3/C2, sensors, actuators |
+- Connect an LED strip and let the agent generate dynamic lighting effects
+- Ask the agent to create a pixel-art mini game
+- Let a balancing robot iteratively improve its own algorithm so it runs faster and more steadily
+- Build a debugger that collects logs and controls the device for you
 
-At the heart of ESP-Claw is the service and framework layer. This is where reasoning, execution, memory, and device abstraction come together.
+## Local Memory System: Learns More About You Over Time
 
-### LLM + Lua + Event Router: Intelligence with Determinism
+Traditional AI agents usually keep memory only inside the conversation window, which means context is easily lost once the session ends. ESP-Claw implements a complete **structured long-term memory system** directly on the device.
 
-In IoT scenarios, actions such as smoke alarm linkage or shutting off a gas valve **must happen quickly and exactly as intended**. A purely LLM-driven system is powerful, but it is also non-deterministic and not ideal for hard real-time response. The same instruction may lead to different outcomes under different models or parameters. **That is exactly why ESP-Claw combines an event router with Lua.**
+**Five memory types:** user profile (`profile`), user preference (`preference`), factual knowledge (`fact`), device event (`event`), and behavior rule (`rule`)
 
-ESP-Claw uses a three-level execution model:
+**Lightweight retrieval:** instead of relying on a vector database, ESP-Claw uses a **summary tag** mechanism. Each memory entry carries 1 to 3 keyword tags. At request time, the system injects the tag pool so the LLM can selectively recall full memory content, enabling efficient retrieval under MCU resource constraints.
 
-|  | **L1: Event Router** | **L2: Lua Runtime** | **L3: LLM Thinker** |
-| --- | --- | --- | --- |
-| **Role** | Deterministic events with no reasoning required | Local analysis and handlers | Non-deterministic reasoning engine |
-| **Latency / reproducibility** | Millisecond-level, 100% deterministic | Millisecond-level, 100% deterministic | Second-level, depends on model behavior |
-| **Offline / token usage** | Fully offline, no token cost | Fully offline, no token cost | Requires network, consumes tokens as needed |
+**Automatic evolution:** memories keep accumulating through three paths: dialogue extraction, event archiving, and behavior rule consolidation. More importantly, the LLM can discover patterns from those memories and **proactively suggest automations**.
 
-**Core mechanism - distilling L3 output into L2/L1 rules:** The key idea behind hierarchical event handling is that non-deterministic LLM output can, after user confirmation, be **solidified into deterministic, real-time rules and programs**. For example, if the LLM notices that a user turns off the lights at 23:00 for three nights in a row, it can suggest creating a Lua schedule rule. Once accepted, that rule runs directly at 23:00 every night without going through LLM inference again. Even if the model provider changes later, the accumulated behavior remains intact.
+## Rich Peripheral Access: Built for Information Processing
 
-**Dynamic Lua loading** makes the device feel alive. New logic can be applied immediately without reflashing firmware. The firmware keeps the skeleton stable, while Lua allows the device behavior to evolve quickly. Scripts can also be pushed remotely, so device capabilities can be updated without physical access.
+ESP32 is naturally suited for collecting, analyzing, transmitting, and acting on information. ESP-Clawgent supports cameras, microphones, and many other sensors. Most drivers can be obtained through the ESP-IDF Component Registry, making integration straightforward once the corresponding component is selected. As a result, the device can hear sound and observe the world around it. ESP-Clawgent also provides a TTS component, allowing it to remind you at the right moment or even play the music you want to hear.
 
-![event stream](./docs/static/event_stream.png)
+## MCP as a Unified Protocol: Make Devices AI-Native Objects
 
-### MCP as a Unified Protocol: Making Every Device an AI-Native Tool
+MCP (Model Context Protocol) is the unified device language of ESP-Claw. The gateway's core responsibility is to **hide all protocol differences** from the upper-layer agent. What the agent always sees is a standardized list of MCP Tools.
 
-MCP (Model Context Protocol) is the common device language inside ESP-Claw. The gateway hides protocol differences from the agent, so what the agent sees is always a clean, standardized list of MCP Tools.
+**Three-step device onboarding path:**
 
-**Device onboarding happens in three steps:**
+1. **Discovery** - After power-on, devices broadcast capability information through BLE advertising without requiring a connection. Wi-Fi devices can supplement this with mDNS, and the gateway passively recognizes them.
+2. **Registration** - The gateway fetches the device's built-in JSON manifest, automatically generates MCP Tools, and registers them into the tool list. OTA upgrades refresh the registrations incrementally.
+3. **Execution** - The AI sends commands through standard MCP Tool Calls. After execution, the device updates its BLE advertising state within 10 ms. The gateway captures the change and pushes it to the agent through SSE, achieving end-to-end latency of roughly 50-220 ms.
 
-1. **Discovery** - After power-on, the device broadcasts its capabilities over BLE ADV without requiring a connection. Wi-Fi devices can complement this with mDNS, and the gateway passively detects them.
-2. **Registration** - The gateway fetches the built-in JSON Manifest, automatically generates MCP Tools, and registers them in the tool list. OTA upgrades refresh the registration incrementally.
-3. **Execution** - The AI invokes standard MCP Tool Calls. After execution, the device updates its ADV broadcast within 10 ms, the gateway captures the new state, and pushes it to the agent over SSE, with an end-to-end latency of roughly 50-220 ms.
+**Compatible with existing devices:** for legacy devices that do not support MCP directly, such as Zigbee or Thread devices, the gateway attaches a **Shadow Server** (a virtual MCP Server) internally and performs protocol translation through Lua drivers. Supporting a new protocol only requires implementing and registering the standard `device_driver_t` interface, with no need to change the core modules.
 
-**Compatibility with existing devices:** For legacy devices that do not support MCP, such as Zigbee or Thread hardware, the gateway mounts an internal **Shadow Server** as a virtual MCP Server and uses Lua drivers for protocol translation. Supporting a new protocol only requires implementing and registering the standard `device_driver_t` interface. The core architecture remains unchanged.
+**AI-native semantic interface:** tool naming follows a verb-noun pattern such as `turn_on` and `get_temperature`, while return values include units and freshness metadata. This lets the AI understand and invoke tools without external documentation. Once all devices appear in a unified MCP Tool form, the AI can orchestrate multi-step workflows across devices and unlock **emergent tool-composition behavior**.
 
-**AI-native semantics:** Tool names use a verb-noun pattern such as `turn_on` and `get_temperature`, while return values carry metadata such as units and freshness. This lets the AI understand and invoke tools without relying on external documentation. Once all devices are exposed through the same MCP abstraction, the agent can compose tools across devices and unlock **emergent multi-step behavior**.
+## Available Offline
 
-### Local Memory System: From Session Memory to Long-Term Understanding
+Automation systems, the Lua runtime, and other capabilities continue to work even when the network is unavailable, and they also support **power-loss recovery**. You can assign specific tasks and let the device perform them quietly and reliably in the background:
 
-Most AI agents are limited to the conversation window. Once the session ends, the memory is gone. ESP-Claw instead provides a full **structured long-term memory system** that runs locally on the device.
+- People counting: use local AI to recognize faces and count passersby
+- Automation gateway: let the agent predefine offline command words and wake words for stable degraded control
 
-**Five memory types:** User profile (`profile`), user preferences (`preference`), factual knowledge (`fact`), device events (`event`), and behavioral rules (`rule`)
+## Focused on Specific Workloads
 
-**Lightweight retrieval:** Instead of depending on a vector database, ESP-Claw uses **summary tags**. Each memory item is attached to one to three keywords. At retrieval time, the system injects the tag pool so the LLM can recall the relevant content on demand. This keeps memory lookup efficient even within MCU constraints.
+ESP-Clawgent includes the full OpenClaw workflow. Compared with Claw systems running on a PC, it can stay **more focused** on the tasks you assign in many real-world scenarios. Combined with the memory system, it can keep evolving along with your habits. You can connect it to your most frequently used messaging app and experience how it continuously learns from your usage. **Privacy is not a concern** because all memories stay on the device.
 
-**Continuous evolution:** Memory grows through conversation extraction, event archiving, and behavior-to-rule refinement. More importantly, the LLM can detect recurring patterns and **proactively suggest new automation rules**.
+You can ask it to do things like:
 
-![memory update](./docs/static/memory.png)
+- Mount it on your water bottle and use sensors to track your daily water intake
+- Help you build habits such as reading or fitness
+- Act as a plant-care assistant that manages water and fertilizer while observing the condition of your plants
 
-> **Privacy and data sovereignty:** All memory data is stored locally on the device in plain-text formats such as JSONL and Markdown. It is never uploaded to the cloud. Users can inspect, edit, or delete it at any time. Your device is your data center.
+## Code Architecture
 
----
+The project follows an **"application example + reusable components"** structure. `application/basic_demo` is a ready-to-build ESP-IDF sample project that assembles Wi-Fi, the configuration page, Lua modules, and various capabilities into a complete device. `components` contains reusable runtime cores, capability plugins, and hardware/script extension modules so the same building blocks can be reused across different boards and scenarios.
 
-## Use Cases
+The current codebase can be understood as four layers:
 
-Users describe what they want in natural language. The LLM interprets the intent, coordinates sensors, screens, speakers, and servos, generates Lua scripts, and deploys them to the device for immediate execution. **Hardware is deployed once, but functionality can keep evolving. The user is not just operating the device, but defining what it can become.**
+- **Application assembly layer:** `application/basic_demo/main`, responsible for the startup entry, network connection, parameter configuration, HTTP config page, and demo-level module registration
+- **Capability layer:** `components/claw_capabilities`, responsible for external-facing capabilities including IM communication, MCP Client/Server, the Lua runtime, scheduling, files, time, web search, and more
+- **Runtime core layer:** `components/claw_modules`, responsible for agent infrastructure including the core context, capability registration, event routing, memory management, and skill management
+- **Device and script extension layer:** `components/lua_modules`, responsible for exposing peripherals such as displays, cameras, audio, buttons, GPIO, storage, and more to Lua and upper-layer agents
 
-### Smart Home AI Assistant
+The main directory structure of the current repository is as follows:
 
-Imagine BLE temperature and humidity sensors working together with Wi-Fi smart lights. The user expresses an intent in natural language, the agent reads sensor data directly from the ADV cache without opening a BLE connection, and then controls the lights over Wi-Fi. No app, no account system, no cloud dependency. Everything runs locally.
-
-### AI Desktop Companion
-
-A single ESP32-S3 with a screen, camera, BMI270 (accelerometer/gyroscope), BMM150 (magnetometer), microphone, speaker, and servo can become a desktop companion with a body, eyes, ears, a voice, facial expression, and an AI brain:
-
-- **A growing AI toy** -> Builds its own personality and memory as it grows with the user
-- **"Make me a shake-to-answer magic book"** -> Detects BMI270 shake events -> shows a random quote on screen + plays a short melody
-- **"I want a meeting guardian"** -> Detects sustained speech and starts timing -> if the meeting runs long, the screen expression shifts from focused to exhausted -> in extreme cases it proactively sends a rescue message
-- **"Build an anti-procrastination coach"** -> Starts a focus countdown -> detects when the user leaves the seat or gets distracted by the phone -> escalates reminders step by step
-- **"Turn into a smart sentry"** -> Wakes on BMI270 motion detection -> captures an image -> uses AI to assess danger level -> escalates audio warnings -> sends a report through chat
-
-### Plant and Pet Care
-
-- **Pet feeder:** Supports scheduled feeding or remote feeding through chat, monitors food level with sensors, and sends reminders proactively
-- **Plant watering:** Uses soil-moisture sensors and a relay-driven pump, while the LLM adjusts the watering strategy dynamically based on season and weather
-
-### More Scenarios
-
-Relay control, music players, environmental monitoring, data visualization, and more. The full demo catalog covers 50+ scenarios across ten categories, including posture interaction, magnetometer-based interaction, audio processing, visual AI, multi-sensor fusion, timed automation, entertainment, and data visualization.
+```text
+esp-clawgent/
+├── application/
+│   └── basic_demo/
+│       ├── main/
+│       │   ├── main.c                     # Firmware entry
+│       │   ├── app_clawgent.c            # App bootstrap and assembly
+│       │   ├── basic_demo_wifi.*         # Wi-Fi connection and network setup
+│       │   ├── basic_demo_settings.*     # Local settings persistence
+│       │   ├── config_http_server.*      # Web configuration service
+│       │   ├── basic_demo_lua_modules.*  # Lua module registration
+│       │   └── web/                      # Frontend assets for device config
+│       └── README.md
+├── components/
+│   ├── claw_modules/
+│   │   ├── claw_core/          # Core runtime context
+│   │   ├── claw_cap/           # Capability abstraction and registration
+│   │   ├── claw_event_router/  # Deterministic event routing
+│   │   ├── claw_memory/        # Structured memory management
+│   │   └── claw_skill/         # Skill metadata and loading
+│   ├── claw_capabilities/
+│   │   ├── cap_im_feishu / cap_im_qq / cap_im_tg / cap_im_wechat
+│   │   ├── cap_mcp_client / cap_mcp_server
+│   │   ├── cap_lua / cap_skill / cap_scheduler / cap_router_mgr
+│   │   ├── cap_files / cap_time / cap_web_search / cap_cli
+│   │   └── ...                 # More agent-facing capabilities
+│   └── lua_modules/
+│       ├── lua_module_display / lua_module_camera / lua_module_audio
+│       ├── lua_module_button / lua_module_gpio / lua_module_led_strip
+│       ├── lua_module_storage / lua_module_delay / lua_module_event_publisher
+│       └── esp_painter         # Lightweight drawing support
+├── docs/                       # Images and supplementary docs
+├── README.md
+└── README_CN.md
+```
 
 ## How to Deploy and Use
 
 ### Ready Out of the Box
 
-Setup and downloads are handled through a web interface. There is no need to compile firmware or install additional software just to flash and get started.
+Configuration and firmware download can be completed directly through the web page. There is no need to compile firmware or install extra software before flashing and using the device.
 
-Thanks to the modular architecture of ESP-BoardManager, the project can be adapted easily across different board-level configurations.
+With the modular architecture of ESP-BoardManager, the project can adapt to and switch across multiple development board configurations.
 
 ### Build from Source
 
-[Basic_demo](./application/basic_demo) provides a foundational example for development and testing. For build and flashing details, please refer to its [README](./application/basic_demo/README.md).
+[`basic_demo`](./application/basic_demo) provides a foundational example. For detailed build and flashing instructions, please refer to its [README](./application/basic_demo/README.md).
 
 ### Notes
 
-- The project is still under active development. If you run into issues, feel free to open an issue.
+- The project is still under active development. If you run into issues, feel free to open an issue at any time.
 - Features such as self-programming depend on strong reasoning models. GPT-5.4 or a model with similar capability is recommended for the best experience.
 
 ## Follow Us
 
-If this project helps or inspires you, a star would mean a lot.
+If this project inspires or helps you, please consider giving it a star. ⭐⭐⭐⭐⭐
 
-Community support is what keeps the project moving forward.
+Your support is always the biggest motivation for future updates.
 
 ## Acknowledgements
 
 ESP-Claw is inspired by [OpenClaw](https://github.com/openclaw/openclaw).
 
-Its implementation of Agent Loop and IM communication on embedded devices was also informed by [MimiClaw](https://github.com/memovai/mimiclaw).
+Its implementation of Agent Loop and IM communication on ESP32 was also informed by [MimiClaw](https://github.com/memovai/mimiclaw).
 
 MimiClaw also helped demonstrate the feasibility of running OpenClaw-style agent workflows on ESP32-S3.
