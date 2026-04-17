@@ -3,7 +3,6 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-#include "cap_skill.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -14,6 +13,7 @@
 #include "cJSON.h"
 #include "claw_cap.h"
 #include "claw_skill.h"
+#include "cap_skill_mgr.h"
 
 static const char *CAP_SKILL_ACTIVATE = "activate_skill";
 static const char *CAP_SKILL_DEACTIVATE = "deactivate_skill";
@@ -21,10 +21,25 @@ static const char *CAP_SKILL_LIST = "list_skill";
 static const char *CAP_SKILL_REGISTER = "register_skill";
 static const char *CAP_SKILL_UNREGISTER = "unregister_skill";
 
-#define CAP_SKILL_ROOT_DIR        "/fatfs/data/skills"
-#define CAP_SKILL_LIST_FILE_PATH  CAP_SKILL_ROOT_DIR "/skills_list.json"
 #define CAP_SKILL_MAX_CATALOG_LEN 16384
-#define CAP_SKILL_MAX_PATH_LEN    256
+#define CAP_SKILL_MAX_PATH_LEN    128
+
+static const char *cap_skill_root_dir(void)
+{
+    return claw_skill_get_skills_root_dir();
+}
+
+static const char *cap_skill_list_file_path(void)
+{
+    static char path[CAP_SKILL_MAX_PATH_LEN];
+
+    const char *root_dir = cap_skill_root_dir();
+    if (!root_dir) {
+        return NULL;
+    }
+    snprintf(path, sizeof(path), "%s/skills_list.json", root_dir);
+    return path;
+}
 
 static void cap_skill_free_string_array(char **items, size_t count)
 {
@@ -293,7 +308,13 @@ static esp_err_t cap_skill_load_catalog_json(char **out_text, cJSON **out_catalo
     *out_text = NULL;
     *out_catalog = NULL;
 
-    err = cap_skill_read_file_dup(CAP_SKILL_LIST_FILE_PATH, &catalog_text);
+    {
+        const char *catalog_path = cap_skill_list_file_path();
+        if (!catalog_path) {
+            return ESP_ERR_INVALID_STATE;
+        }
+        err = cap_skill_read_file_dup(catalog_path, &catalog_text);
+    }
     if (err != ESP_OK) {
         return err;
     }
@@ -330,12 +351,17 @@ static esp_err_t cap_skill_render_catalog(cJSON *catalog, char **out_text)
 static esp_err_t cap_skill_write_catalog_and_reload(const char *new_text, const char *old_text)
 {
     esp_err_t err;
+    const char *catalog_path = NULL;
 
     if (!new_text || !old_text) {
         return ESP_ERR_INVALID_ARG;
     }
+    catalog_path = cap_skill_list_file_path();
+    if (!catalog_path) {
+        return ESP_ERR_INVALID_STATE;
+    }
 
-    err = cap_skill_write_file_text(CAP_SKILL_LIST_FILE_PATH, new_text);
+    err = cap_skill_write_file_text(catalog_path, new_text);
     if (err != ESP_OK) {
         return err;
     }
@@ -345,7 +371,7 @@ static esp_err_t cap_skill_write_catalog_and_reload(const char *new_text, const 
         return ESP_OK;
     }
 
-    if (cap_skill_write_file_text(CAP_SKILL_LIST_FILE_PATH, old_text) == ESP_OK) {
+    if (cap_skill_write_file_text(catalog_path, old_text) == ESP_OK) {
         (void)claw_skill_reload_registry();
     }
 
@@ -564,11 +590,18 @@ static esp_err_t cap_skill_register_execute(const char *input_json,
         return ESP_ERR_INVALID_ARG;
     }
 
-    if (snprintf(skill_path, sizeof(skill_path), "%s/%s", CAP_SKILL_ROOT_DIR, file_item->valuestring) >=
-            (int)sizeof(skill_path)) {
-        cJSON_Delete(root);
-        cap_skill_write_error(output, output_size, "file path is too long", skill_id_item->valuestring);
-        return ESP_ERR_INVALID_SIZE;
+    {
+        const char *root_dir = cap_skill_root_dir();
+        if (!root_dir) {
+            cJSON_Delete(root);
+            cap_skill_write_error(output, output_size, "skill storage is not initialized", skill_id_item->valuestring);
+            return ESP_ERR_INVALID_STATE;
+        }
+        if (snprintf(skill_path, sizeof(skill_path), "%s/%s", root_dir, file_item->valuestring) >= (int)sizeof(skill_path)) {
+            cJSON_Delete(root);
+            cap_skill_write_error(output, output_size, "file path is too long", skill_id_item->valuestring);
+            return ESP_ERR_INVALID_SIZE;
+        }
     }
     if (!cap_skill_file_exists(skill_path)) {
         cJSON_Delete(root);
@@ -788,7 +821,7 @@ static const claw_cap_group_t s_skill_group = {
     .descriptor_count = sizeof(s_skill_descriptors) / sizeof(s_skill_descriptors[0]),
 };
 
-esp_err_t cap_skill_register_group(void)
+esp_err_t cap_skill_mgr_register_group(void)
 {
     if (claw_cap_group_exists(s_skill_group.group_id)) {
         return ESP_OK;

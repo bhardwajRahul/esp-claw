@@ -188,8 +188,8 @@ void register_cap_im_feishu(void)
         " feishu --start\n"
         " feishu --stop\n"
         " feishu --send-text ou_xxx --text \"hello\"\n"
-        " feishu --send-image ou_xxx --path /fatfs/data/inbox/pic.jpg --caption \"look\"\n"
-        " feishu --send-file ou_xxx --path /fatfs/data/docs/readme.txt\n",
+        " feishu --send-image ou_xxx --path <storage_root>/inbox/pic.jpg --caption \"look\"\n"
+        " feishu --send-file ou_xxx --path <storage_root>/docs/readme.txt\n",
         .func = feishu_func,
         .argtable = &feishu_args,
     };

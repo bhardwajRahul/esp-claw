@@ -29,7 +29,7 @@ Use this skill when the user wants to interact through WeChat, especially to sen
 - `path` must be a real local filesystem path on the device.
 - If the exact image path is unknown, inspect storage first with file capabilities such as `list_dir`.
 - Do not pass remote URLs directly to WeChat send capabilities.
-- In this demo app, inbound WeChat media is typically saved under `/fatfs/data/inbox`.
+- In this demo app, inbound WeChat media is typically saved under `<storage_root>/inbox`.
 
 ## Recommended workflow
 1. Confirm that the target channel is WeChat.
@@ -52,7 +52,7 @@ Send an image:
 ```json
 {
   "chat_id": "wxid_abc123",
-  "path": "/fatfs/data/inbox/capture.jpg",
+  "path": "<storage_root>/inbox/capture.jpg",
   "caption": "Here is the image."
 }
 ```

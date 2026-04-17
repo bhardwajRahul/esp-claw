@@ -11,9 +11,6 @@ if not output_codec then
     return
 end
 
-print(string.format("[audio_play_test_wav] output_codec=%s, output_rate=%d, output_channels=%d, output_bits=%d",
-      output_codec, output_rate, output_channels, output_bits))
-
 local output, out_err = audio.new_output(output_codec, output_rate, output_channels, output_bits)
 if not output then
     print("[audio_play_test_wav] ERROR: new_output failed: " .. tostring(out_err))

@@ -3,7 +3,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-#include "cap_session_mng.h"
+#include "cap_session_mgr.h"
 
 #include <errno.h>
 #include <inttypes.h>
@@ -18,23 +18,23 @@
 #include "esp_log.h"
 #include "freertos/semphr.h"
 
-static const char *TAG = "cap_session_mng";
+static const char *TAG = "cap_session_mgr";
 
-#define CAP_SESSION_MNG_MAP_DIRNAME  "chat_map"
-#define CAP_SESSION_MNG_PATH_SIZE    256
-#define CAP_SESSION_MNG_KEY_SIZE     128
-#define CAP_SESSION_MNG_ID_SIZE      128
+#define CAP_SESSION_MGR_MAP_DIRNAME  "chat_map"
+#define CAP_SESSION_MGR_PATH_SIZE    256
+#define CAP_SESSION_MGR_KEY_SIZE     128
+#define CAP_SESSION_MGR_ID_SIZE      128
 
 typedef struct {
     bool configured;
     char session_root_dir[160];
     char mapping_root_dir[192];
     SemaphoreHandle_t mutex;
-} cap_session_mng_state_t;
+} cap_session_mgr_state_t;
 
-static cap_session_mng_state_t s_session_mng = {0};
+static cap_session_mgr_state_t s_session_mgr = {0};
 
-static bool cap_session_mng_is_chat_event(const claw_event_t *event)
+static bool cap_session_mgr_is_chat_event(const claw_event_t *event)
 {
     return event &&
            strcmp(event->event_type, "message") == 0 &&
@@ -42,7 +42,7 @@ static bool cap_session_mng_is_chat_event(const claw_event_t *event)
            event->chat_id[0] != '\0';
 }
 
-static uint32_t cap_session_mng_hash(const char *text)
+static uint32_t cap_session_mgr_hash(const char *text)
 {
     uint32_t hash = 2166136261u;
     const unsigned char *ptr = (const unsigned char *)text;
@@ -55,7 +55,7 @@ static uint32_t cap_session_mng_hash(const char *text)
     return hash;
 }
 
-static void cap_session_mng_sanitize(const char *src, char *dst, size_t dst_size)
+static void cap_session_mgr_sanitize(const char *src, char *dst, size_t dst_size)
 {
     size_t off = 0;
 
@@ -84,7 +84,7 @@ static void cap_session_mng_sanitize(const char *src, char *dst, size_t dst_size
     dst[off] = '\0';
 }
 
-static esp_err_t cap_session_mng_ensure_dir(const char *path)
+static esp_err_t cap_session_mgr_ensure_dir(const char *path)
 {
     struct stat st = {0};
 
@@ -100,10 +100,7 @@ static esp_err_t cap_session_mng_ensure_dir(const char *path)
     return ESP_FAIL;
 }
 
-static esp_err_t cap_session_mng_build_chat_key(const char *source_channel,
-                                                const char *chat_id,
-                                                char *buf,
-                                                size_t buf_size)
+static esp_err_t cap_session_mgr_build_chat_key(const char *source_channel, const char *chat_id, char *buf, size_t buf_size)
 {
     int written;
 
@@ -119,9 +116,7 @@ static esp_err_t cap_session_mng_build_chat_key(const char *source_channel,
     return ESP_OK;
 }
 
-static esp_err_t cap_session_mng_build_mapping_path(const char *chat_key,
-                                                    char *path,
-                                                    size_t path_size)
+static esp_err_t cap_session_mgr_build_mapping_path(const char *chat_key, char *path, size_t path_size)
 {
     char safe_key[40];
     uint32_t hash;
@@ -131,15 +126,15 @@ static esp_err_t cap_session_mng_build_mapping_path(const char *chat_key,
         return ESP_ERR_INVALID_ARG;
     }
 
-    cap_session_mng_sanitize(chat_key, safe_key, sizeof(safe_key));
+    cap_session_mgr_sanitize(chat_key, safe_key, sizeof(safe_key));
     if (strlen(safe_key) > 24) {
         safe_key[24] = '\0';
     }
-    hash = cap_session_mng_hash(chat_key);
+    hash = cap_session_mgr_hash(chat_key);
     written = snprintf(path,
                        path_size,
                        "%s/chat_%s_%08" PRIx32 ".json",
-                       s_session_mng.mapping_root_dir,
+                       s_session_mgr.mapping_root_dir,
                        safe_key[0] ? safe_key : "default",
                        hash);
     if (written < 0 || (size_t)written >= path_size) {
@@ -149,15 +144,15 @@ static esp_err_t cap_session_mng_build_mapping_path(const char *chat_key,
     return ESP_OK;
 }
 
-static esp_err_t cap_session_mng_write_mapping_locked(const char *chat_key, int version)
+static esp_err_t cap_session_mgr_write_mapping_locked(const char *chat_key, int version)
 {
-    char path[CAP_SESSION_MNG_PATH_SIZE];
+    char path[CAP_SESSION_MGR_PATH_SIZE];
     cJSON *root = NULL;
     char *json = NULL;
     FILE *file = NULL;
     esp_err_t err;
 
-    err = cap_session_mng_build_mapping_path(chat_key, path, sizeof(path));
+    err = cap_session_mgr_build_mapping_path(chat_key, path, sizeof(path));
     if (err != ESP_OK) {
         return err;
     }
@@ -189,9 +184,9 @@ static esp_err_t cap_session_mng_write_mapping_locked(const char *chat_key, int 
     return ESP_OK;
 }
 
-static esp_err_t cap_session_mng_read_version_locked(const char *chat_key, int *out_version)
+static esp_err_t cap_session_mgr_read_version_locked(const char *chat_key, int *out_version)
 {
-    char path[CAP_SESSION_MNG_PATH_SIZE];
+    char path[CAP_SESSION_MGR_PATH_SIZE];
     FILE *file = NULL;
     long size;
     char *text = NULL;
@@ -204,7 +199,7 @@ static esp_err_t cap_session_mng_read_version_locked(const char *chat_key, int *
         return ESP_ERR_INVALID_ARG;
     }
 
-    err = cap_session_mng_build_mapping_path(chat_key, path, sizeof(path));
+    err = cap_session_mgr_build_mapping_path(chat_key, path, sizeof(path));
     if (err != ESP_OK) {
         return err;
     }
@@ -254,25 +249,25 @@ static esp_err_t cap_session_mng_read_version_locked(const char *chat_key, int *
     return ESP_OK;
 }
 
-static esp_err_t cap_session_mng_build_current_session_id_locked(const char *source_channel,
+static esp_err_t cap_session_mgr_build_current_session_id_locked(const char *source_channel,
                                                                  const char *chat_id,
                                                                  char *buf,
                                                                  size_t buf_size)
 {
-    char chat_key[CAP_SESSION_MNG_KEY_SIZE];
+    char chat_key[CAP_SESSION_MGR_KEY_SIZE];
     int version = 0;
     int written;
     esp_err_t err;
 
-    err = cap_session_mng_build_chat_key(source_channel, chat_id, chat_key, sizeof(chat_key));
+    err = cap_session_mgr_build_chat_key(source_channel, chat_id, chat_key, sizeof(chat_key));
     if (err != ESP_OK) {
         return err;
     }
 
-    err = cap_session_mng_read_version_locked(chat_key, &version);
+    err = cap_session_mgr_read_version_locked(chat_key, &version);
     if (err == ESP_ERR_NOT_FOUND || err == ESP_ERR_INVALID_RESPONSE) {
         version = 1;
-        err = cap_session_mng_write_mapping_locked(chat_key, version);
+        err = cap_session_mgr_write_mapping_locked(chat_key, version);
     }
     if (err != ESP_OK) {
         return err;
@@ -286,22 +281,22 @@ static esp_err_t cap_session_mng_build_current_session_id_locked(const char *sou
     return ESP_OK;
 }
 
-static esp_err_t cap_session_mng_roll_locked(const char *source_channel,
+static esp_err_t cap_session_mgr_roll_locked(const char *source_channel,
                                              const char *chat_id,
                                              char *new_session_id,
                                              size_t new_session_id_size,
                                              int *out_version)
 {
-    char chat_key[CAP_SESSION_MNG_KEY_SIZE];
+    char chat_key[CAP_SESSION_MGR_KEY_SIZE];
     int version = 0;
     esp_err_t err;
 
-    err = cap_session_mng_build_chat_key(source_channel, chat_id, chat_key, sizeof(chat_key));
+    err = cap_session_mgr_build_chat_key(source_channel, chat_id, chat_key, sizeof(chat_key));
     if (err != ESP_OK) {
         return err;
     }
 
-    err = cap_session_mng_read_version_locked(chat_key, &version);
+    err = cap_session_mgr_read_version_locked(chat_key, &version);
     if (err == ESP_ERR_NOT_FOUND || err == ESP_ERR_INVALID_RESPONSE) {
         version = 0;
         err = ESP_OK;
@@ -311,16 +306,13 @@ static esp_err_t cap_session_mng_roll_locked(const char *source_channel,
     }
 
     version++;
-    err = cap_session_mng_write_mapping_locked(chat_key, version);
+    err = cap_session_mgr_write_mapping_locked(chat_key, version);
     if (err != ESP_OK) {
         return err;
     }
 
     if (new_session_id && new_session_id_size > 0) {
-        err = cap_session_mng_build_current_session_id_locked(source_channel,
-                                                              chat_id,
-                                                              new_session_id,
-                                                              new_session_id_size);
+        err = cap_session_mgr_build_current_session_id_locked(source_channel, chat_id, new_session_id, new_session_id_size);
         if (err != ESP_OK) {
             return err;
         }
@@ -332,12 +324,12 @@ static esp_err_t cap_session_mng_roll_locked(const char *source_channel,
     return ESP_OK;
 }
 
-static esp_err_t cap_session_mng_roll_execute(const char *input_json,
+static esp_err_t cap_session_mgr_roll_execute(const char *input_json,
                                               const claw_cap_call_context_t *ctx,
                                               char *output,
                                               size_t output_size)
 {
-    char session_id[CAP_SESSION_MNG_ID_SIZE];
+    char session_id[CAP_SESSION_MGR_ID_SIZE];
     int version = 0;
     esp_err_t err;
 
@@ -349,20 +341,16 @@ static esp_err_t cap_session_mng_roll_execute(const char *input_json,
         }
         return ESP_ERR_INVALID_ARG;
     }
-    if (!s_session_mng.configured || !s_session_mng.mutex) {
+    if (!s_session_mgr.configured || !s_session_mgr.mutex) {
         if (output && output_size > 0) {
             snprintf(output, output_size, "{\"ok\":false,\"error\":\"session manager not configured\"}");
         }
         return ESP_ERR_INVALID_STATE;
     }
 
-    xSemaphoreTakeRecursive(s_session_mng.mutex, portMAX_DELAY);
-    err = cap_session_mng_roll_locked(ctx->channel,
-                                      ctx->chat_id,
-                                      session_id,
-                                      sizeof(session_id),
-                                      &version);
-    xSemaphoreGiveRecursive(s_session_mng.mutex);
+    xSemaphoreTakeRecursive(s_session_mgr.mutex, portMAX_DELAY);
+    err = cap_session_mgr_roll_locked(ctx->channel, ctx->chat_id, session_id, sizeof(session_id), &version);
+    xSemaphoreGiveRecursive(s_session_mgr.mutex);
     if (err != ESP_OK) {
         if (output && output_size > 0) {
             snprintf(output, output_size, "{\"ok\":false,\"error\":\"%s\"}", esp_err_to_name(err));
@@ -372,16 +360,12 @@ static esp_err_t cap_session_mng_roll_execute(const char *input_json,
 
     ESP_LOGI(TAG, "Rolled chat session %s:%s to version %d", ctx->channel, ctx->chat_id, version);
     if (output && output_size > 0) {
-        snprintf(output,
-                 output_size,
-                 "{\"ok\":true,\"session_id\":\"%s\",\"version\":%d}",
-                 session_id,
-                 version);
+        snprintf(output, output_size, "{\"ok\":true,\"session_id\":\"%s\",\"version\":%d}", session_id, version);
     }
     return ESP_OK;
 }
 
-static const claw_cap_descriptor_t s_session_mng_caps[] = {
+static const claw_cap_descriptor_t s_session_mgr_caps[] = {
     {
         .id = "roll_chat_session",
         .name = "roll_chat_session",
@@ -390,63 +374,60 @@ static const claw_cap_descriptor_t s_session_mng_caps[] = {
         .kind = CLAW_CAP_KIND_CALLABLE,
         .cap_flags = CLAW_CAP_FLAG_RESTRICTED,
         .input_schema_json = "{\"type\":\"object\"}",
-        .execute = cap_session_mng_roll_execute,
+        .execute = cap_session_mgr_roll_execute,
     },
 };
 
-static const claw_cap_group_t s_session_mng_group = {
-    .group_id = "cap_session_mng",
-    .plugin_name = "cap_session_mng",
+static const claw_cap_group_t s_session_mgr_group = {
+    .group_id = "cap_session_mgr",
+    .plugin_name = "cap_session_mgr",
     .version = "1.0.0",
-    .descriptors = s_session_mng_caps,
-    .descriptor_count = sizeof(s_session_mng_caps) / sizeof(s_session_mng_caps[0]),
+    .descriptors = s_session_mgr_caps,
+    .descriptor_count = sizeof(s_session_mgr_caps) / sizeof(s_session_mgr_caps[0]),
 };
 
-esp_err_t cap_session_mng_register_group(void)
+esp_err_t cap_session_mgr_register_group(void)
 {
-    return claw_cap_register_group(&s_session_mng_group);
+    return claw_cap_register_group(&s_session_mgr_group);
 }
 
-esp_err_t cap_session_mng_set_session_root_dir(const char *session_root_dir)
+esp_err_t cap_session_mgr_set_session_root_dir(const char *session_root_dir)
 {
     int written;
-    SemaphoreHandle_t mutex = s_session_mng.mutex;
+    SemaphoreHandle_t mutex = s_session_mgr.mutex;
 
     if (!session_root_dir || !session_root_dir[0]) {
         return ESP_ERR_INVALID_ARG;
     }
 
-    memset(&s_session_mng, 0, sizeof(s_session_mng));
-    s_session_mng.mutex = mutex;
-    strlcpy(s_session_mng.session_root_dir, session_root_dir, sizeof(s_session_mng.session_root_dir));
-    written = snprintf(s_session_mng.mapping_root_dir,
-                       sizeof(s_session_mng.mapping_root_dir),
+    memset(&s_session_mgr, 0, sizeof(s_session_mgr));
+    s_session_mgr.mutex = mutex;
+    strlcpy(s_session_mgr.session_root_dir, session_root_dir, sizeof(s_session_mgr.session_root_dir));
+    written = snprintf(s_session_mgr.mapping_root_dir,
+                       sizeof(s_session_mgr.mapping_root_dir),
                        "%s/%s",
                        session_root_dir,
-                       CAP_SESSION_MNG_MAP_DIRNAME);
-    if (written < 0 || (size_t)written >= sizeof(s_session_mng.mapping_root_dir)) {
+                       CAP_SESSION_MGR_MAP_DIRNAME);
+    if (written < 0 || (size_t)written >= sizeof(s_session_mgr.mapping_root_dir)) {
         return ESP_ERR_INVALID_SIZE;
     }
 
-    if (!s_session_mng.mutex) {
-        s_session_mng.mutex = xSemaphoreCreateRecursiveMutex();
+    if (!s_session_mgr.mutex) {
+        s_session_mgr.mutex = xSemaphoreCreateRecursiveMutex();
     }
-    if (!s_session_mng.mutex) {
+    if (!s_session_mgr.mutex) {
         return ESP_ERR_NO_MEM;
     }
-    if (cap_session_mng_ensure_dir(s_session_mng.session_root_dir) != ESP_OK ||
-            cap_session_mng_ensure_dir(s_session_mng.mapping_root_dir) != ESP_OK) {
+    if (cap_session_mgr_ensure_dir(s_session_mgr.session_root_dir) != ESP_OK ||
+            cap_session_mgr_ensure_dir(s_session_mgr.mapping_root_dir) != ESP_OK) {
         return ESP_FAIL;
     }
 
-    s_session_mng.configured = true;
+    s_session_mgr.configured = true;
     return ESP_OK;
 }
 
-size_t cap_session_mng_build_session_id(const claw_event_t *event,
-                                        char *buf,
-                                        size_t buf_size,
-                                        void *user_ctx)
+size_t cap_session_mgr_build_session_id(const claw_event_t *event, char *buf, size_t buf_size, void *user_ctx)
 {
     esp_err_t err;
 
@@ -455,23 +436,20 @@ size_t cap_session_mng_build_session_id(const claw_event_t *event,
     if (!buf || buf_size == 0 || !event) {
         return 0;
     }
-    if (!cap_session_mng_is_chat_event(event) || !s_session_mng.configured || !s_session_mng.mutex) {
-        return claw_event_build_session_id(event, buf, buf_size);
+    if (!cap_session_mgr_is_chat_event(event) || !s_session_mgr.configured || !s_session_mgr.mutex) {
+        return claw_event_router_build_session_id(event, buf, buf_size);
     }
 
-    xSemaphoreTakeRecursive(s_session_mng.mutex, portMAX_DELAY);
-    err = cap_session_mng_build_current_session_id_locked(event->source_channel,
-                                                          event->chat_id,
-                                                          buf,
-                                                          buf_size);
-    xSemaphoreGiveRecursive(s_session_mng.mutex);
+    xSemaphoreTakeRecursive(s_session_mgr.mutex, portMAX_DELAY);
+    err = cap_session_mgr_build_current_session_id_locked(event->source_channel, event->chat_id, buf, buf_size);
+    xSemaphoreGiveRecursive(s_session_mgr.mutex);
     if (err != ESP_OK) {
         ESP_LOGW(TAG,
                  "Falling back to default session id for %s:%s: %s",
                  event->source_channel,
                  event->chat_id,
                  esp_err_to_name(err));
-        return claw_event_build_session_id(event, buf, buf_size);
+        return claw_event_router_build_session_id(event, buf, buf_size);
     }
 
     return strlen(buf);

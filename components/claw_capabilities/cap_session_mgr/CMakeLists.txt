@@ -1,12 +1,10 @@
 idf_component_register(
     SRCS
-        "src/cap_skill.c"
-        "src/cmd_cap_skill.c"
+        "src/cap_session_mgr.c"
     INCLUDE_DIRS
         "include"
     REQUIRES
         claw_cap
-        claw_skill
+        claw_event_router
         json
-        console
 )

@@ -6,8 +6,8 @@ This skill describes how to correctly use audio when writing Lua scripts.
 - Import it with `local audio = require("audio")`
 - Call `audio.new_input(codec_dev_handle, sample_rate, channels, bits_per_sample [, gain_db])` to create an input handle
 - Call `audio.new_output(codec_dev_handle, sample_rate, channels, bits_per_sample [, volume])` to create an output handle
-- Call `audio.play_wav(output_handle, path)` to play a WAV file under `/fatfs/data/`
-- Call `audio.record_wav(input_handle, path, duration_ms)` to record audio to a WAV file under `/fatfs/data/`
+- Call `audio.play_wav(output_handle, path)` to play a WAV file under the current storage root
+- Call `audio.record_wav(input_handle, path, duration_ms)` to record audio to a WAV file under the current storage root
 - Call `audio.loopback(input_handle, output_handle [, duration_ms])` to route input to output for monitoring
 - Call `audio.set_volume(output_handle, pct)`, `audio.get_volume(output_handle)`, `audio.set_mute(output_handle, enabled)`, or `audio.set_gain(input_handle, db)` to adjust levels
 - Call `audio.mic_read_level(input_handle [, duration_ms])` to read microphone level statistics such as `rms` and `peak`
@@ -23,6 +23,7 @@ local output_codec, rate, channels, bits =
 local output = audio.new_output(output_codec, rate, channels, bits)
 
 audio.set_volume(output, 60)
-audio.play_wav(output, "/fatfs/data/test.wav")
+local storage = require("storage")
+audio.play_wav(output, storage.join_path(storage.get_root_dir(), "test.wav"))
 audio.close(output)
 ```

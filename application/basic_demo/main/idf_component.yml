@@ -48,11 +48,11 @@ dependencies:
   cap_router_mgr:
     path: ../../../components/claw_capabilities/cap_router_mgr
 
-  cap_session_mng:
-    path: ../../../components/claw_capabilities/cap_session_mng
+  cap_session_mgr:
+    path: ../../../components/claw_capabilities/cap_session_mgr
 
-  cap_skill:
-    path: ../../../components/claw_capabilities/cap_skill
+  cap_skill_mgr:
+    path: ../../../components/claw_capabilities/cap_skill_mgr
 
   cap_scheduler:
     path: ../../../components/claw_capabilities/cap_scheduler

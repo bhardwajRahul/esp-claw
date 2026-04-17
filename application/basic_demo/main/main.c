@@ -18,7 +18,7 @@
 static const char *TAG = "basic_demo";
 static basic_demo_settings_t s_settings = {0};
 
-const char *basic_demo_fatfs_base_path = "/fatfs/data";
+const char *basic_demo_fatfs_base_path = "/fatfs";
 #define BASIC_DEMO_FATFS_PARTITION_LABEL "storage"
 #define BASIC_DEMO_ENABLE_MEM_LOG        (0)
 

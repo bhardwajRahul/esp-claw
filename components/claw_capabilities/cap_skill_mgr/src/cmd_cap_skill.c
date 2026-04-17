@@ -210,7 +210,7 @@ void register_cap_skill(void)
     skill_args.catalog = arg_lit0(NULL, "catalog", "Print the skills catalog JSON");
     skill_args.register_skill = arg_str0("r", "register", "<skill_id>", "Register one skill in the catalog");
     skill_args.unregister_skill = arg_str0("u", "unregister", "<skill_id>", "Remove one skill from the catalog");
-    skill_args.file = arg_str0("f", "file", "<file.md>", "Skill markdown path relative to /fatfs/data/skills");
+    skill_args.file = arg_str0("f", "file", "<file.md>", "Skill markdown path relative to <storage_root>/skills");
     skill_args.title = arg_str0("t", "title", "<title>", "Skill title for catalog registration");
     skill_args.summary = arg_str0(NULL, "summary", "<summary>", "Skill summary for catalog registration");
     skill_args.activate = arg_str0("a", "activate", "<skill_id>", "Activate one skill");

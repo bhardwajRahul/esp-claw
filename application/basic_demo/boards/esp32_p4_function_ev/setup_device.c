@@ -1,10 +1,8 @@
 /*
  * SPDX-FileCopyrightText: 2026 Espressif Systems (Shanghai) CO LTD
- * SPDX-License-Identifier: LicenseRef-Espressif-Modified-MIT
  *
- * See LICENSE file for details.
+ * SPDX-License-Identifier: Apache-2.0
  */
-
 #include <string.h>
 #include "esp_log.h"
 #include "dev_display_lcd.h"

@@ -8,7 +8,7 @@ This skill describes how to correctly use camera when writing Lua scripts.
 - Call `camera.info()` to get stream information such as `width`, `height`, and `pixel_format`
 - Call `camera.get_frame([timeout_ms])` to borrow one raw frame
 - Call `camera.release_frame(frame)` or `frame:release()` after using a borrowed frame
-- Call `camera.capture(save_path [, timeout_ms])` to capture a frame to a `.jpg` or `.jpeg` path under `/fatfs/data/`
+- Call `camera.capture(save_path [, timeout_ms])` to capture a frame to a `.jpg` or `.jpeg` path under the current storage root
 - Call `camera.close()` when the camera is no longer needed
 
 ## Frame lifecycle
@@ -43,7 +43,8 @@ local frame_info = frame:info()
 print(frame_info.width, frame_info.height, frame_info.pixel_format, frame:bytes())
 frame:release()
 
-local capture = camera.capture("/fatfs/data/capture.jpg", 3000)
+local storage = require("storage")
+local capture = camera.capture(storage.join_path(storage.get_root_dir(), "capture.jpg"), 3000)
 print(capture.path, capture.bytes)
 camera.close()
 ```

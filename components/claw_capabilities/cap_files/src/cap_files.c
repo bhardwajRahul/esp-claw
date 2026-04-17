@@ -20,16 +20,18 @@
 
 static const char *TAG = "cap_files";
 
-#define CAP_FILES_DEFAULT_BASE_DIR "/fatfs/data"
-#define CAP_FILES_MAX_FILE_SIZE    (32 * 1024)
+#define CAP_FILES_MAX_FILE_SIZE (32 * 1024)
 
-static char s_files_base_dir[128] = CAP_FILES_DEFAULT_BASE_DIR;
+static char s_files_base_dir[128] = {0};
 
 static bool cap_files_path_is_valid(const char *path)
 {
     size_t base_len;
 
     if (!path || !path[0]) {
+        return false;
+    }
+    if (s_files_base_dir[0] == '\0') {
         return false;
     }
 
@@ -51,6 +53,9 @@ static esp_err_t cap_files_resolve_path(const char *path, char *resolved, size_t
 
     if (!path || !path[0] || !resolved || resolved_size == 0) {
         return ESP_ERR_INVALID_ARG;
+    }
+    if (s_files_base_dir[0] == '\0') {
+        return ESP_ERR_INVALID_STATE;
     }
 
     if (path[0] == '/') {
@@ -601,6 +606,9 @@ static const claw_cap_group_t s_files_group = {
 
 esp_err_t cap_files_register_group(void)
 {
+    if (s_files_base_dir[0] == '\0') {
+        return ESP_ERR_INVALID_STATE;
+    }
     if (claw_cap_group_exists(s_files_group.group_id)) {
         return ESP_OK;
     }

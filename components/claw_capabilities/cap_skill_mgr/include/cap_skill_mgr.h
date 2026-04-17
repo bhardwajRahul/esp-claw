@@ -11,7 +11,7 @@
 extern "C" {
 #endif
 
-esp_err_t cap_skill_register_group(void);
+esp_err_t cap_skill_mgr_register_group(void);
 
 #ifdef __cplusplus
 }

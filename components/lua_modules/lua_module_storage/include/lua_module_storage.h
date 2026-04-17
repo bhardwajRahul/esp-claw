@@ -13,7 +13,7 @@ extern "C" {
 #endif
 
 int luaopen_storage(lua_State *L);
-esp_err_t lua_module_storage_register(void);
+esp_err_t lua_module_storage_register(const char *base_path);
 
 #ifdef __cplusplus
 }

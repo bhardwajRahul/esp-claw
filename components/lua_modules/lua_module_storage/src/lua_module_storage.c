@@ -17,15 +17,21 @@
 #include "esp_vfs_fat.h"
 #include "lauxlib.h"
 
-#define LUA_MODULE_STORAGE_DEFAULT_ROOT_DIR "/fatfs/data"
+static char *s_storage_base_path;
 
-// The basic demo defines this symbol in main.c; keep a weak fallback so this
-// Lua module can still link in apps that do not override the storage root.
-const char *basic_demo_fatfs_base_path __attribute__((weak)) = LUA_MODULE_STORAGE_DEFAULT_ROOT_DIR;
+static const char *lua_module_storage_base_path(void)
+{
+    return s_storage_base_path;
+}
 
 static int lua_module_storage_get_root_dir(lua_State *L)
 {
-    lua_pushstring(L, basic_demo_fatfs_base_path);
+    const char *base_path = lua_module_storage_base_path();
+
+    if (!base_path || !base_path[0]) {
+        return luaL_error(L, "storage root is not configured");
+    }
+    lua_pushstring(L, base_path);
     return 1;
 }
 
@@ -285,9 +291,15 @@ static int lua_module_storage_rename(lua_State *L)
 
 static int lua_module_storage_get_free_space(lua_State *L)
 {
+    const char *base_path = lua_module_storage_base_path();
     uint64_t total = 0;
     uint64_t free_bytes = 0;
-    esp_err_t err = esp_vfs_fat_info(basic_demo_fatfs_base_path, &total, &free_bytes);
+
+    if (!base_path || !base_path[0]) {
+        return luaL_error(L, "storage root is not configured");
+    }
+
+    esp_err_t err = esp_vfs_fat_info(base_path, &total, &free_bytes);
 
     if (err != ESP_OK) {
         return luaL_error(L, "failed to query storage free space: %s", esp_err_to_name(err));
@@ -331,7 +343,20 @@ int luaopen_storage(lua_State *L)
     return 1;
 }
 
-esp_err_t lua_module_storage_register(void)
+esp_err_t lua_module_storage_register(const char *base_path)
 {
+    char *base_path_copy = NULL;
+
+    if (!base_path || !base_path[0]) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    base_path_copy = strdup(base_path);
+    if (!base_path_copy) {
+        return ESP_ERR_NO_MEM;
+    }
+
+    free(s_storage_base_path);
+    s_storage_base_path = base_path_copy;
     return cap_lua_register_module("storage", luaopen_storage);
 }

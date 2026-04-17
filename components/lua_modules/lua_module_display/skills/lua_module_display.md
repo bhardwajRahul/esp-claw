@@ -44,7 +44,7 @@ pcall(display.deinit)
 - Colors are almost always passed as three integers: `r, g, b`.
 - Text drawing only supports ASCII text.
 - For Chinese or other Unicode text, render an image and draw it with `draw_png_file(...)` or `draw_jpeg_file(...)`.
-- Image file paths must be absolute paths like `/fatfs/data/pic.jpg`.
+- Image file paths must be absolute paths under the current storage root, for example `storage.join_path(storage.get_root_dir(), "pic.jpg")`.
 - Paths containing `..` are rejected.
 - Supported image file extensions are `.jpg`, `.jpeg`, and `.png`.
 

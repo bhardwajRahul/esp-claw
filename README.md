@@ -156,7 +156,7 @@ esp-claw/
 │   ├── claw_capabilities/
 │   │   ├── cap_im_feishu / cap_im_qq / cap_im_tg / cap_im_wechat
 │   │   ├── cap_mcp_client / cap_mcp_server
-│   │   ├── cap_lua / cap_skill / cap_scheduler / cap_router_mgr
+│   │   ├── cap_lua / cap_skill_mgr / cap_scheduler / cap_router_mgr
 │   │   ├── cap_files / cap_time / cap_web_search / cap_cli
 │   │   └── ...                 # More agent-facing capabilities
 │   └── lua_modules/

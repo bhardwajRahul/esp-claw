@@ -31,7 +31,7 @@ Use this skill when the user wants to interact through Feishu, especially to rep
 - `path` must be a real local filesystem path on the device.
 - If the exact path is unknown, inspect storage first with file capabilities such as `list_dir`.
 - Do not pass remote URLs directly to Feishu send capabilities.
-- In this demo app, inbound Feishu attachments are typically saved under `/fatfs/data/inbox`.
+- In this demo app, inbound Feishu attachments are typically saved under `<storage_root>/inbox`.
 
 ## Recommended workflow
 1. Determine whether the user wants text, an image, or a generic file.
@@ -61,7 +61,7 @@ Send an image:
 ```json
 {
   "chat_id": "oc_xxx123456",
-  "path": "/fatfs/data/inbox/capture.jpg",
+  "path": "<storage_root>/inbox/capture.jpg",
   "caption": "Here is the image."
 }
 ```
@@ -70,7 +70,7 @@ Send a file:
 ```json
 {
   "chat_id": "oc_xxx123456",
-  "path": "/fatfs/data/reports/status.json",
+  "path": "<storage_root>/reports/status.json",
   "caption": "Latest report."
 }
 ```

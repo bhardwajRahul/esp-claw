@@ -19,7 +19,7 @@ This skill describes how to correctly use storage when writing Lua scripts.
 ## Path joining
 - Prefer `storage.join_path(...)` whenever building a path from `storage.get_root_dir()` and child names.
 - Pass each path component as a separate string argument, for example `storage.join_path(root, "logs", "today.txt")`.
-- `join_path` removes duplicate separators between components, so `storage.join_path("/fatfs/data/", "/demo/", "test.txt")` returns `/fatfs/data/demo/test.txt`.
+- `join_path` removes duplicate separators between components, so `storage.join_path(storage.get_root_dir(), "/demo/", "test.txt")` returns `<storage_root>/demo/test.txt`.
 - Empty string components are ignored, so optional subdirectories can be passed directly when they may be empty.
 - The first component decides whether the result is absolute. Use `storage.get_root_dir()` as the first component for filesystem paths in this demo.
 - Do not put multiple logical components in one string when they can be separate arguments; `storage.join_path(root, "demo", filename)` is easier to audit than `storage.join_path(root, "demo/" .. filename)`.

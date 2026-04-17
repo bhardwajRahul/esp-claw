@@ -20,12 +20,12 @@ Use this skill when the user wants the device to inspect a local image and descr
 ## Path guidance
 - Prefer real local paths already stored on the device.
 - If the exact path is unknown, inspect storage first with file capabilities such as `list_dir`.
-- Common roots in this demo include `/fatfs/data/inbox`, `/fatfs/data`, or other application-managed storage paths.
+- Common roots in this demo include `<storage_root>/inbox`, `<storage_root>`, or other application-managed storage paths.
 
 ## Example
 ```json
 {
-  "path": "/fatfs/data/inbox/photo.jpg",
+  "path": "<storage_root>/inbox/photo.jpg",
   "prompt": "Describe the main objects in this image and mention any visible text."
 }
 ```

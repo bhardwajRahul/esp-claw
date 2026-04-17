@@ -22,11 +22,10 @@ static const char *TAG = "lua_audio";
 /* --------------------------------------------------------------------------
  * Audio constants
  * -------------------------------------------------------------------------- */
-#define AUDIO_CHUNK_BYTES       512
-#define AUDIO_DEFAULT_VOL       80
-#define AUDIO_DEFAULT_GAIN_DB   30.0f
-#define AUDIO_BASE_PATH         "/fatfs/"
-#define AUDIO_HANDLE_METATABLE  "lua_audio_handle"
+#define AUDIO_CHUNK_BYTES      512
+#define AUDIO_DEFAULT_VOL      80
+#define AUDIO_DEFAULT_GAIN_DB  30.0f
+#define AUDIO_HANDLE_METATABLE "lua_audio_handle"
 
 typedef enum {
     AUDIO_HANDLE_INPUT = 0,
@@ -160,14 +159,10 @@ static esp_err_t wav_parse(FILE *f, audio_wav_info_t *info)
  * -------------------------------------------------------------------------- */
 static bool audio_path_valid(const char *path, const char *ext)
 {
-    size_t base_len = strlen(AUDIO_BASE_PATH);
     size_t ext_len = strlen(ext);
     size_t len;
 
-    if (!path || strstr(path, "..")) {
-        return false;
-    }
-    if (strncmp(path, AUDIO_BASE_PATH, base_len) != 0) {
+    if (!path || !path[0] || strstr(path, "..")) {
         return false;
     }
     len = strlen(path);
@@ -375,6 +370,7 @@ static int lua_audio_close(lua_State *L)
 
 /* --------------------------------------------------------------------------
  * audio.play_wav(output_handle, path) -> nil
+ * path must be a .wav file and must not contain "..".
  * -------------------------------------------------------------------------- */
 static int lua_audio_play_wav(lua_State *L)
 {
@@ -385,7 +381,7 @@ static int lua_audio_play_wav(lua_State *L)
     audio_wav_info_t info = {0};
 
     if (!audio_path_valid(path, ".wav")) {
-        return luaL_error(L, "audio play_wav: path must be a .wav file under %s", AUDIO_BASE_PATH);
+        return luaL_error(L, "audio play_wav: path must be a .wav file and must not contain '..'");
     }
 
     f = fopen(path, "rb");
@@ -438,6 +434,7 @@ cleanup:
 
 /* --------------------------------------------------------------------------
  * audio.record_wav(input_handle, path, duration_ms) -> { path, duration_ms, bytes }
+ * path must be a .wav file and must not contain "..".
  * -------------------------------------------------------------------------- */
 static int lua_audio_record_wav(lua_State *L)
 {
@@ -450,7 +447,7 @@ static int lua_audio_record_wav(lua_State *L)
     uint8_t wav_hdr[44];
 
     if (!audio_path_valid(path, ".wav")) {
-        return luaL_error(L, "audio record_wav: path must be a .wav file under %s", AUDIO_BASE_PATH);
+        return luaL_error(L, "audio record_wav: path must be a .wav file and must not contain '..'");
     }
     if (duration_ms == 0) {
         return luaL_error(L, "audio record_wav: duration_ms must be positive");

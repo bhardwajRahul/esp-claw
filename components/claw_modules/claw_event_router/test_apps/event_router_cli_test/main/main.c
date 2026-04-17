@@ -27,7 +27,7 @@
 
 static const char *TAG = "event_router_test";
 
-#define TEST_FATFS_BASE_PATH       "/fatfs/data"
+#define TEST_FATFS_BASE_PATH       "/tmp"
 #define TEST_FATFS_PARTITION_LABEL "storage"
 #define TEST_AUTOMATION_DIR        TEST_FATFS_BASE_PATH "/auto"
 #define TEST_RULES_PATH            TEST_AUTOMATION_DIR "/rules"

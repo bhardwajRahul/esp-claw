@@ -30,7 +30,7 @@ Use this skill when the user wants to interact through Telegram, especially to r
 - `path` must be a real local filesystem path on the device.
 - If the exact path is unknown, inspect storage first with file capabilities such as `list_dir`.
 - Do not pass remote URLs directly to Telegram send capabilities.
-- In this demo app, inbound Telegram attachments are typically saved under `/fatfs/data/inbox`.
+- In this demo app, inbound Telegram attachments are typically saved under `<storage_root>/inbox`.
 
 ## Recommended workflow
 1. Determine whether the user wants text, an image, or a generic file.
@@ -60,7 +60,7 @@ Send an image:
 ```json
 {
   "chat_id": "123456789",
-  "path": "/fatfs/data/inbox/capture.jpg",
+  "path": "<storage_root>/inbox/capture.jpg",
   "caption": "Here is the image."
 }
 ```
@@ -69,7 +69,7 @@ Send a file:
 ```json
 {
   "chat_id": "123456789",
-  "path": "/fatfs/data/reports/status.json",
+  "path": "<storage_root>/reports/status.json",
   "caption": "Latest report."
 }
 ```

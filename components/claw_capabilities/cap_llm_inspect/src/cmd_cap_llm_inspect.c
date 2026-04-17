@@ -84,7 +84,7 @@ void register_cap_llm_inspect(void)
         .command = "llm_inspect",
         .help = "Inspect a local image with the configured LLM.\n"
         "Example:\n"
-        " llm_inspect --path /fatfs/data/inbox/pic.jpg --prompt \"Describe the screen contents\"\n",
+        " llm_inspect --path <storage_root>/inbox/pic.jpg --prompt \"Describe the screen contents\"\n",
         .func = llm_inspect_func,
         .argtable = &inspect_args,
     };

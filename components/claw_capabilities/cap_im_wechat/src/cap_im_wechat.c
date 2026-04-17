@@ -55,7 +55,6 @@ static const char *TAG = "cap_im_wechat";
 #define CAP_IM_WECHAT_ROUTE_TAG_SIZE 64
 #define CAP_IM_WECHAT_CLIENT_ID_SIZE 48
 #define CAP_IM_WECHAT_BODY_BUF_SIZE 1536
-#define CAP_IM_WECHAT_STORAGE_BASE "/fatfs/data"
 #define CAP_IM_WECHAT_DEFAULT_BASE_URL "https://ilinkai.weixin.qq.com"
 #define CAP_IM_WECHAT_DEFAULT_CDN_BASE_URL "https://novac2c.cdn.weixin.qq.com/c2c"
 #define CAP_IM_WECHAT_DEFAULT_APP_ID "bot"

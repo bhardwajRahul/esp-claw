@@ -860,6 +860,15 @@ esp_err_t claw_skill_reload_registry(void)
     return err;
 }
 
+const char *claw_skill_get_skills_root_dir(void)
+{
+    if (!s_skill.initialized || !s_skill.skills_root_dir[0]) {
+        return NULL;
+    }
+
+    return s_skill.skills_root_dir;
+}
+
 esp_err_t claw_skill_read_skills_list(char *buf, size_t size)
 {
     return claw_skill_render_skills_list(buf, size);

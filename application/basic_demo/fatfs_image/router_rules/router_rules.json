@@ -28,15 +28,15 @@
     ]
   },
   {
-    "id": "im_hello_claw",
-    "description": "Intercept IM hello! esp-claw and reply directly.Just for demonstration",
+    "id": "im_hello_clawgent",
+    "description": "Intercept IM hello! clawgent and reply directly.Just for demonstration",
     "enabled": true,
     "ack": "{{event.source_channel}} hello intercepted",
     "match": {
       "event_type": "message",
       "event_key": "text",
       "content_type": "text",
-      "text": "hello! esp-claw"
+      "text": "hello! clawgent"
     },
     "actions": [
       {
@@ -91,31 +91,6 @@
     ]
   },
   {
-    "id": "mcp_state_report_to_script",
-    "description": "Route MCP state reports into Lua for deterministic handling.",
-    "enabled": true,
-    "ack": "mcp state report scripted",
-    "match": {
-      "event_type": "mcp_device_state_report",
-      "source_cap": "mcp_server",
-      "source_channel": "mcp"
-    },
-    "actions": [
-      {
-        "type": "run_script",
-        "input": {
-          "path": "/fatfs/data/lua/hello.lua",
-          "async": false,
-          "event_type": "{{event.event_type}}",
-          "source_channel": "{{event.source_channel}}",
-          "text": "{{event.text}}",
-          "payload_json": "{{event.payload_json}}",
-          "chat_id": "{{event.chat_id}}"
-        }
-      }
-    ]
-  },
-  {
     "id": "im_any_message_agent",
     "description": "Route IM text messages to the agent.",
     "enabled": true,
@@ -131,30 +106,15 @@
         "type": "run_agent",
         "input": {
           "target_channel": "{{event.source_channel}}",
-          "target_chat_id": "{{event.chat_id}}",
           "session_policy": "chat"
         }
-      }
-    ]
-  },
-  {
-    "id": "agent_response_send_message",
-    "description": "Deliver final agent responses to the original IM chat.",
-    "enabled": true,
-    "consume_on_match": true,
-    "ack": "{{event.source_channel}} agent response sent",
-    "match": {
-      "source_cap": "claw_core",
-      "event_type": "agent_response",
-      "content_type": "text"
-    },
-    "actions": [
+      },
       {
         "type": "send_message",
         "input": {
           "channel": "{{event.source_channel}}",
           "chat_id": "{{event.chat_id}}",
-          "message": "{{event.text}}"
+          "message": "{{last.output}}"
         }
       }
     ]

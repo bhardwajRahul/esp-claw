@@ -67,7 +67,6 @@ typedef struct {
 } claw_event_router_runtime_t;
 
 static claw_event_router_runtime_t s_runtime = {
-    .rules_path = CLAW_EVENT_ROUTER_DEFAULT_RULES_PATH,
     .max_rules = CLAW_EVENT_ROUTER_DEFAULT_MAX_RULES,
     .max_actions_per_rule = CLAW_EVENT_ROUTER_DEFAULT_MAX_ACTIONS,
     .cap_output_size = CLAW_EVENT_ROUTER_DEFAULT_OUTPUT_SIZE,
@@ -1913,6 +1912,9 @@ esp_err_t claw_event_router_init(const claw_event_router_config_t *config)
     if (s_runtime.initialized) {
         return ESP_ERR_INVALID_STATE;
     }
+    if (!config || !config->rules_path || !config->rules_path[0]) {
+        return ESP_ERR_INVALID_ARG;
+    }
 
     if (!s_runtime.mutex) {
         s_runtime.mutex = xSemaphoreCreateRecursiveMutex();
@@ -1926,9 +1928,7 @@ esp_err_t claw_event_router_init(const claw_event_router_config_t *config)
     if (config) {
         s_runtime.config = *config;
     }
-    if (config && config->rules_path && config->rules_path[0]) {
-        strlcpy(s_runtime.rules_path, config->rules_path, sizeof(s_runtime.rules_path));
-    }
+    strlcpy(s_runtime.rules_path, config->rules_path, sizeof(s_runtime.rules_path));
     if (config && config->max_rules > 0) {
         s_runtime.max_rules = config->max_rules;
     }

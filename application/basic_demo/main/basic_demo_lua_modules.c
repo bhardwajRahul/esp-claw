@@ -25,6 +25,8 @@
 #include "lua_module_camera.h"
 #endif
 
+extern const char *basic_demo_fatfs_base_path;
+
 esp_err_t basic_demo_lua_modules_register(void)
 {
     esp_err_t err;
@@ -34,7 +36,7 @@ esp_err_t basic_demo_lua_modules_register(void)
         return err;
     }
 
-    err = lua_module_storage_register();
+    err = lua_module_storage_register(basic_demo_fatfs_base_path);
     if (err != ESP_OK) {
         return err;
     }

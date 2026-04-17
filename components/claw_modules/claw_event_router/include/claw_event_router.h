@@ -18,8 +18,6 @@
 extern "C" {
 #endif
 
-#define CLAW_EVENT_ROUTER_DEFAULT_RULES_PATH "/fatfs/data/automation/automations.json"
-
 typedef size_t (*claw_event_router_session_builder_fn)(const claw_event_t *event,
                                                        char *buf,
                                                        size_t buf_size,

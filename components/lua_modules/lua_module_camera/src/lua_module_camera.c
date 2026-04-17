@@ -18,7 +18,6 @@
 #include "lua_module_camera_service.h"
 
 #define LUA_MODULE_CAMERA_NAME "camera"
-#define LUA_MODULE_CAMERA_BASE_DIR "/fatfs/data"
 #define LUA_MODULE_CAMERA_FRAME_MT "camera.frame"
 
 typedef struct {
@@ -185,14 +184,7 @@ static bool lua_module_camera_has_suffix(const char *path, const char *suffix)
 
 static bool lua_module_camera_save_path_is_valid(const char *path)
 {
-    size_t base_len;
-
-    if (path == NULL) {
-        return false;
-    }
-
-    base_len = strlen(LUA_MODULE_CAMERA_BASE_DIR);
-    if (strncmp(path, LUA_MODULE_CAMERA_BASE_DIR, base_len) != 0 || path[base_len] != '/') {
+    if (path == NULL || path[0] == '\0') {
         return false;
     }
     if (strstr(path, "..") != NULL) {
@@ -248,7 +240,7 @@ static int lua_module_camera_info(lua_State *L)
 
 /* camera.capture(save_path [, timeout_ms])
  * Captures a JPEG frame and writes it to save_path.
- * save_path must be a .jpg/.jpeg file under /fatfs/data/.
+ * save_path must be a .jpg/.jpeg file and must not contain "..".
  * Returns a table with: path, bytes, width, height, pixel_format, pixel_format_raw,
  *                        frame_bytes, timestamp_us. */
 static int lua_module_camera_capture(lua_State *L)
@@ -262,8 +254,7 @@ static int lua_module_camera_capture(lua_State *L)
     esp_err_t err;
 
     if (!lua_module_camera_save_path_is_valid(path)) {
-        return luaL_error(L, "save path must be a .jpg/.jpeg file under %s",
-                          LUA_MODULE_CAMERA_BASE_DIR);
+        return luaL_error(L, "save path must be a .jpg/.jpeg file and must not contain '..'");
     }
     if (timeout_ms < 0) {
         return luaL_error(L, "timeout_ms must be non-negative");
