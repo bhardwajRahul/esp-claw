@@ -2,7 +2,7 @@ local ls    = require("led_strip")
 local delay = require("delay")
 
 -- Update these values to match the LED strip wiring on the target board.
-local LED_GPIO_NUM = 26
+local LED_GPIO_NUM = 38
 local LED_COUNT = 16
 
 -- Create the strip handle and drive all pixels together.

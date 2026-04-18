@@ -11,6 +11,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "esp_codec_dev.h"
 #include "esp_err.h"
 #include "esp_log.h"
@@ -19,12 +21,16 @@
 
 static const char *TAG = "lua_audio";
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 /* --------------------------------------------------------------------------
  * Audio constants
  * -------------------------------------------------------------------------- */
 #define AUDIO_CHUNK_BYTES      512
 #define AUDIO_DEFAULT_VOL      80
-#define AUDIO_DEFAULT_GAIN_DB  30.0f
+#define AUDIO_DEFAULT_GAIN_DB  10.0f
 #define AUDIO_HANDLE_METATABLE "lua_audio_handle"
 
 typedef enum {
@@ -433,6 +439,102 @@ cleanup:
 }
 
 /* --------------------------------------------------------------------------
+ * audio.play_tone(output_handle, freq_hz, duration_ms [, volume_pct [, wait_done]]) -> nil
+ * -------------------------------------------------------------------------- */
+static int lua_audio_play_tone(lua_State *L)
+{
+    audio_lua_handle_t *dac = lua_audio_check_handle(L, 1, AUDIO_HANDLE_OUTPUT, "play_tone");
+    uint32_t freq_hz = lua_audio_check_u32_arg(L, 2, "freq_hz");
+    uint32_t duration_ms = lua_audio_check_u32_arg(L, 3, "duration_ms");
+    int volume_pct = (int)luaL_optinteger(L, 4, 90);
+    bool wait_done = false;
+    int16_t *buf = NULL;
+    uint32_t total_frames;
+    uint32_t frames_written = 0;
+    uint32_t chunk_frames;
+    float amplitude;
+    float phase = 0.0f;
+    float phase_step;
+    float gain_scale;
+    TickType_t start_tick;
+    TickType_t target_ticks;
+
+    if (volume_pct < 0 || volume_pct > 100) {
+        return luaL_error(L, "audio play_tone: volume_pct must be 0..100");
+    }
+    if (!lua_isnoneornil(L, 5)) {
+        wait_done = lua_toboolean(L, 5);
+    }
+    if (dac->bits_per_sample != 16 || dac->bytes_per_sample != sizeof(int16_t)) {
+        return luaL_error(L, "audio play_tone: only 16-bit PCM output is supported");
+    }
+    if (freq_hz >= dac->sample_rate / 2) {
+        return luaL_error(L, "audio play_tone: freq_hz must be less than half of sample_rate");
+    }
+
+    chunk_frames = AUDIO_CHUNK_BYTES / (dac->channels * dac->bytes_per_sample);
+    if (chunk_frames == 0) {
+        return luaL_error(L, "audio play_tone: invalid output frame size");
+    }
+
+    total_frames = (uint32_t)(((uint64_t)dac->sample_rate * duration_ms) / 1000);
+    start_tick = xTaskGetTickCount();
+    target_ticks = pdMS_TO_TICKS(duration_ms);
+    if (target_ticks == 0 && duration_ms > 0) {
+        target_ticks = 1;
+    }
+    if (volume_pct == 0) {
+        gain_scale = 0.0f;
+    } else {
+        /* Match esp_codec_dev default volume semantics: [1, 100] -> [-49.5 dB, 0 dB]. */
+        float gain_db = ((float)volume_pct - 100.0f) * 0.5f;
+        gain_scale = powf(10.0f, gain_db / 20.0f);
+    }
+    amplitude = 32767.0f * gain_scale;
+    phase_step = 2.0f * (float)M_PI * (float)freq_hz / (float)dac->sample_rate;
+
+    buf = (int16_t *)malloc(chunk_frames * dac->channels * sizeof(int16_t));
+    if (!buf) {
+        return luaL_error(L, "audio play_tone: out of memory");
+    }
+
+    /* Generate one tone chunk at a time to avoid a large temporary buffer. */
+    while (frames_written < total_frames) {
+        uint32_t frames_this_chunk = total_frames - frames_written;
+        if (frames_this_chunk > chunk_frames) {
+            frames_this_chunk = chunk_frames;
+        }
+
+        for (uint32_t i = 0; i < frames_this_chunk; i++) {
+            int16_t sample = (int16_t)(sinf(phase) * amplitude);
+            for (uint8_t ch = 0; ch < dac->channels; ch++) {
+                buf[i * dac->channels + ch] = sample;
+            }
+            phase += phase_step;
+            if (phase >= 2.0f * (float)M_PI) {
+                phase -= 2.0f * (float)M_PI;
+            }
+        }
+
+        if (esp_codec_dev_write(dac->codec_dev, buf, (int)(frames_this_chunk * dac->channels * sizeof(int16_t))) != ESP_CODEC_DEV_OK) {
+            free(buf);
+            return luaL_error(L, "audio play_tone: write failed");
+        }
+        frames_written += frames_this_chunk;
+    }
+
+    if (wait_done) {
+        TickType_t elapsed_ticks = xTaskGetTickCount() - start_tick;
+        if (elapsed_ticks < target_ticks) {
+            vTaskDelay(target_ticks - elapsed_ticks);
+        }
+    }
+
+    free(buf);
+    return 0;
+}
+
+/* --------------------------------------------------------------------------
  * audio.record_wav(input_handle, path, duration_ms) -> { path, duration_ms, bytes }
  * path must be a .wav file and must not contain "..".
  * -------------------------------------------------------------------------- */
@@ -714,6 +816,7 @@ int luaopen_audio(lua_State *L)
         {"new_input",      lua_audio_new_input},
         {"new_output",     lua_audio_new_output},
         {"close",          lua_audio_close},
+        {"play_tone",      lua_audio_play_tone},
         {"play_wav",       lua_audio_play_wav},
         {"record_wav",     lua_audio_record_wav},
         {"loopback",       lua_audio_loopback},

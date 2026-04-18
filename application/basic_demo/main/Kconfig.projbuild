@@ -20,6 +20,13 @@ config BASIC_DEMO_MEMORY_MODE_LIGHTWEIGHT
 
 endchoice
 
+config BASIC_DEMO_ENABLE_EMOTE
+    bool "Enable emote"
+    depends on ESP_BOARD_DEV_DISPLAY_LCD_SUPPORT
+    default y
+    help
+        Enable expression emote startup and emote asset packaging for boards with LCD display support.
+
 config BASIC_DEMO_WIFI_SSID
     string "Default Wi-Fi SSID"
     default ""
@@ -185,7 +192,7 @@ config BASIC_DEMO_SEARCH_TAVILY_KEY
 
 config BASIC_DEMO_TIME_TIMEZONE
     string "Default time cap timezone"
-    default "UTC0"
+    default "CST-8"
     help
         POSIX-style timezone string used by the time cap.
 

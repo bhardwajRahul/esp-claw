@@ -172,6 +172,19 @@ static void cap_lua_set_args_global(lua_State *L, const char *args_json)
     lua_setglobal(L, "args");
 }
 
+static void cap_lua_run_runtime_cleanups(void)
+{
+    size_t i;
+
+    for (i = 0; i < cap_lua_get_runtime_cleanup_count(); i++) {
+        cap_lua_runtime_cleanup_fn_t cleanup_fn = cap_lua_get_runtime_cleanup(i);
+
+        if (cleanup_fn) {
+            cleanup_fn();
+        }
+    }
+}
+
 esp_err_t cap_lua_runtime_init(void)
 {
     ESP_LOGI(TAG,
@@ -236,6 +249,7 @@ esp_err_t cap_lua_runtime_execute_file(const char *path,
     lua_sethook(L, cap_lua_timeout_hook, LUA_MASKCOUNT, 1000);
 
     status = luaL_dofile(L, path);
+    cap_lua_run_runtime_cleanups();
     if (status != LUA_OK) {
         const char *msg = lua_tostring(L, -1);
         if (ctx.len > 0) {

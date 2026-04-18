@@ -25,6 +25,20 @@ static EventGroupHandle_t s_wifi_event_group;
 static int s_retry_count;
 static bool s_connected;
 static char s_ip_addr[16] = "0.0.0.0";
+static basic_demo_wifi_state_cb_t s_state_cb;
+static void *s_state_cb_user_ctx;
+
+static void notify_wifi_state(bool connected)
+{
+    if (s_connected == connected) {
+        return;
+    }
+
+    s_connected = connected;
+    if (s_state_cb) {
+        s_state_cb(connected, s_state_cb_user_ctx);
+    }
+}
 
 static void wifi_event_handler(void *arg,
                                esp_event_base_t event_base,
@@ -39,7 +53,7 @@ static void wifi_event_handler(void *arg,
     }
 
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
-        s_connected = false;
+        notify_wifi_state(false);
         strlcpy(s_ip_addr, "0.0.0.0", sizeof(s_ip_addr));
         if (s_retry_count < WIFI_MAX_RETRY) {
             s_retry_count++;
@@ -55,7 +69,7 @@ static void wifi_event_handler(void *arg,
     if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
         snprintf(s_ip_addr, sizeof(s_ip_addr), IPSTR, IP2STR(&event->ip_info.ip));
-        s_connected = true;
+        notify_wifi_state(true);
         s_retry_count = 0;
         xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
         ESP_LOGI(TAG, "Connected, IP=%s", s_ip_addr);
@@ -120,6 +134,18 @@ esp_err_t basic_demo_wifi_wait_connected(uint32_t timeout_ms)
         return ESP_OK;
     }
     return ESP_ERR_TIMEOUT;
+}
+
+esp_err_t basic_demo_wifi_register_state_callback(basic_demo_wifi_state_cb_t cb, void *user_ctx)
+{
+    s_state_cb = cb;
+    s_state_cb_user_ctx = user_ctx;
+
+    if (s_state_cb) {
+        s_state_cb(s_connected, s_state_cb_user_ctx);
+    }
+
+    return ESP_OK;
 }
 
 bool basic_demo_wifi_is_connected(void)

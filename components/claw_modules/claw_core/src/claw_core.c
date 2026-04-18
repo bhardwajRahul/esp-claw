@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
+#include <time.h>
 
 #include "cJSON.h"
 #include "esp_log.h"
@@ -20,6 +21,7 @@
 
 #include "claw_core_llm.h"
 #include "claw_event_publisher.h"
+#include "sdkconfig.h"
 
 static const char *TAG = "claw_core";
 
@@ -318,6 +320,12 @@ static int64_t claw_core_now_ms(void)
 
     gettimeofday(&tv, NULL);
     return ((int64_t)tv.tv_sec * 1000LL) + (tv.tv_usec / 1000LL);
+}
+
+static void claw_core_apply_timezone(void)
+{
+    setenv("TZ", CONFIG_BASIC_DEMO_TIME_TIMEZONE, 1);
+    tzset();
 }
 
 static esp_err_t build_response_payload_json(const claw_core_request_t *request,
@@ -1189,6 +1197,7 @@ esp_err_t claw_core_init(const claw_core_config_t *config)
     }
 
     memset(&s_core, 0, sizeof(s_core));
+    claw_core_apply_timezone();
 
     s_core.system_prompt = dup_string(config->system_prompt);
     if (!s_core.system_prompt) {

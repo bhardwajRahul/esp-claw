@@ -4,6 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 #include "app_claw.h"
+#if defined(CONFIG_BASIC_DEMO_ENABLE_EMOTE)
+#include "app_expression_emote.h"
+#endif
 #include "basic_demo_settings.h"
 #include "basic_demo_wifi.h"
 #include "config_http_server.h"
@@ -23,6 +26,20 @@ const char *basic_demo_fatfs_base_path = "/fatfs";
 #define BASIC_DEMO_ENABLE_MEM_LOG        (0)
 
 static wl_handle_t s_wl_handle = WL_INVALID_HANDLE;
+
+static void on_wifi_state_changed(bool connected, void *user_ctx)
+{
+    (void)user_ctx;
+
+#if defined(CONFIG_BASIC_DEMO_ENABLE_EMOTE)
+    esp_err_t err = app_expression_emote_set_network_state(connected);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "Failed to update network emote: %s", esp_err_to_name(err));
+    }
+#else
+    (void)connected;
+#endif
+}
 
 static esp_err_t init_nvs(void)
 {
@@ -113,9 +130,13 @@ void app_main(void)
     ESP_ERROR_CHECK(basic_demo_settings_init());
     ESP_ERROR_CHECK(basic_demo_settings_load(&s_settings));
     ESP_ERROR_CHECK(esp_board_manager_init());
+#if defined(CONFIG_BASIC_DEMO_ENABLE_EMOTE)
+    ESP_ERROR_CHECK(app_expression_emote_start());
+#endif
     ESP_ERROR_CHECK(init_fatfs());
     ESP_ERROR_CHECK(basic_demo_wifi_init());
     ESP_ERROR_CHECK(config_http_server_init(basic_demo_fatfs_base_path));
+    ESP_ERROR_CHECK(basic_demo_wifi_register_state_callback(on_wifi_state_changed, NULL));
 
     if (basic_demo_wifi_start(s_settings.wifi_ssid, s_settings.wifi_password) == ESP_OK) {
         ESP_ERROR_CHECK(config_http_server_start());

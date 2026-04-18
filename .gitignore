@@ -24,7 +24,6 @@ managed_components/
 # Cache / Compiled
 .cache
 *.pyc
-*.bin
 
 # MCP / Memov
 .mcp.json

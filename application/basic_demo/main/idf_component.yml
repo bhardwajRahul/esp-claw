@@ -12,6 +12,9 @@ dependencies:
     rules:
       - if: "target in [esp32p4]"
 
+  espressif2022/esp_emote_expression:
+    version: "^1.0.0"
+
   cap_cli:
     path: ../../../components/claw_capabilities/cap_cli
 
@@ -122,3 +125,6 @@ dependencies:
 
   lua_module_storage:
     path: ../../../components/lua_modules/lua_module_storage
+
+  lua_module_system:
+    path: ../../../components/lua_modules/lua_module_system

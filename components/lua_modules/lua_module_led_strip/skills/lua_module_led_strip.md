@@ -1,6 +1,7 @@
 # Lua LED Strip
 
 This skill describes how to correctly use led_strip when writing Lua scripts.
+When a request mentions `ws2812`, use this `led_strip` module by default.
 
 ## How to call
 - Import it with `local led_strip = require("led_strip")`

@@ -6,6 +6,7 @@ idf_component_register(
         "include"
     REQUIRES
         cap_lua
+        display_arbiter
         esp_lcd
         esp_painter
         libpng

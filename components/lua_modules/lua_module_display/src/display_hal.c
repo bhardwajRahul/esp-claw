@@ -8,6 +8,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
+#include "display_arbiter.h"
 #include "esp_attr.h"
 #include "esp_check.h"
 #include "esp_heap_caps.h"
@@ -714,6 +715,15 @@ static esp_err_t display_hal_submit_bitmap_locked(int x_start, int y_start,
     if (s_state.display_flush_done) {
         while (xSemaphoreTake(s_state.display_flush_done, 0) == pdTRUE) {
         }
+    }
+
+    if (!display_arbiter_is_owner(DISPLAY_ARBITER_OWNER_LUA)) {
+        s_state.flush_in_flight = false;
+        if (pending_framebuffer_index >= 0) {
+            s_state.visible_framebuffer_index = (uint8_t)pending_framebuffer_index;
+            s_state.pending_framebuffer_index = -1;
+        }
+        return ESP_OK;
     }
 
     if (display_hal_panel_requires_swap()) {

@@ -41,11 +41,20 @@ local function close_all()
 end
 
 local ok, err = xpcall(function()
-    -- ── 1. volume ────────────────────────────────────────────────────────────
+    -- ── 1. volume and tone ───────────────────────────────────────────────────
     print("[audio_demo] setting volume to 100...")
     audio.set_volume(output, 100)
     local vol = audio.get_volume(output)
     print("[audio_demo] current volume: " .. tostring(vol))
+
+    print("[audio_demo] playing a short tone sequence ...")
+    audio.play_tone(output, 523, 180, 100)
+    delay.delay_ms(100)
+    audio.play_tone(output, 659, 180, 100)
+    delay.delay_ms(100)
+    audio.play_tone(output, 784, 240, 100)
+    delay.delay_ms(100)
+    print("[audio_demo] tone sequence done")
 
     -- ── 2. record ────────────────────────────────────────────────────────────
     print("[audio_demo] recording 3 seconds to " .. REC_PATH .. " ...")

@@ -27,6 +27,7 @@ After `display.init(...)` succeeds:
 - `display.width()` returns the current screen width
 - `display.height()` returns the current screen height
 - Most drawing APIs can be used
+- The display arbiter automatically grants Lua foreground ownership for the lifetime of the display session
 
 When finished:
 

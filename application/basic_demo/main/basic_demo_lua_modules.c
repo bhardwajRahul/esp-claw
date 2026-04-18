@@ -12,6 +12,7 @@
 #include "lua_module_storage.h"
 #include "lua_module_button.h"
 #include "lua_module_esp_heap.h"
+#include "lua_module_system.h"
 #include "lua_module_board_manager.h"
 
 #if defined(CONFIG_ESP_BOARD_DEV_AUDIO_CODEC_SUPPORT)
@@ -88,6 +89,11 @@ esp_err_t basic_demo_lua_modules_register(void)
 #endif
 
     err = lua_module_esp_heap_register();
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    err = lua_module_system_register();
     if (err != ESP_OK) {
         return err;
     }

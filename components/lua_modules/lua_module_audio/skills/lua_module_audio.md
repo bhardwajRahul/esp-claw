@@ -6,6 +6,7 @@ This skill describes how to correctly use audio when writing Lua scripts.
 - Import it with `local audio = require("audio")`
 - Call `audio.new_input(codec_dev_handle, sample_rate, channels, bits_per_sample [, gain_db])` to create an input handle
 - Call `audio.new_output(codec_dev_handle, sample_rate, channels, bits_per_sample [, volume])` to create an output handle
+- Call `audio.play_tone(output_handle, freq_hz, duration_ms [, volume_pct [, wait_done]])` to generate and play a sine tone on a 16-bit PCM output handle, where `wait_done` defaults to `false` and can be set to `true` to wait for playback completion
 - Call `audio.play_wav(output_handle, path)` to play a WAV file under the current storage root
 - Call `audio.record_wav(input_handle, path, duration_ms)` to record audio to a WAV file under the current storage root
 - Call `audio.loopback(input_handle, output_handle [, duration_ms])` to route input to output for monitoring
@@ -23,6 +24,7 @@ local output_codec, rate, channels, bits =
 local output = audio.new_output(output_codec, rate, channels, bits)
 
 audio.set_volume(output, 60)
+audio.play_tone(output, 880, 200, 35)
 local storage = require("storage")
 audio.play_wav(output, storage.join_path(storage.get_root_dir(), "test.wav"))
 audio.close(output)
