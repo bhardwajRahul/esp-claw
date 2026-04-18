@@ -352,6 +352,11 @@ static esp_err_t build_response_payload_json(const claw_core_request_t *request,
         cJSON_Delete(root);
         return ESP_ERR_NO_MEM;
     }
+    if (response->error_message && response->error_message[0] &&
+            !cJSON_AddStringToObject(root, "error_message", response->error_message)) {
+        cJSON_Delete(root);
+        return ESP_ERR_NO_MEM;
+    }
 
     payload_json = cJSON_PrintUnformatted(root);
     cJSON_Delete(root);
@@ -370,17 +375,22 @@ static esp_err_t build_agent_response_event(const claw_core_request_t *request,
 {
     const char *channel = NULL;
     const char *chat_id = NULL;
+    const char *text = NULL;
     int64_t now_ms;
     esp_err_t err;
 
-    if (!request || !response || !out_event || !out_payload_json ||
-            response->status != CLAW_CORE_RESPONSE_STATUS_OK ||
-            !response->text || !response->text[0]) {
+    if (!request || !response || !out_event || !out_payload_json) {
         return ESP_ERR_INVALID_ARG;
     }
 
     memset(out_event, 0, sizeof(*out_event));
     *out_payload_json = NULL;
+
+    text = (response->status == CLAW_CORE_RESPONSE_STATUS_OK) ?
+           response->text : response->error_message;
+    if (!text || !text[0]) {
+        return ESP_ERR_INVALID_ARG;
+    }
 
     err = build_response_payload_json(request, response, out_payload_json);
     if (err != ESP_OK) {
@@ -416,7 +426,7 @@ static esp_err_t build_agent_response_event(const claw_core_request_t *request,
     }
     out_event->timestamp_ms = now_ms;
     out_event->session_policy = CLAW_EVENT_SESSION_POLICY_CHAT;
-    out_event->text = response->text;
+    out_event->text = (char *)text;
     out_event->payload_json = *out_payload_json;
 
     return ESP_OK;
@@ -431,10 +441,6 @@ static void publish_response_event_if_requested(const claw_core_request_item_t *
 
     if (!request || !response ||
             !(request->view.flags & CLAW_CORE_REQUEST_FLAG_PUBLISH_RESPONSE_EVENT)) {
-        return;
-    }
-    if (response->view.status != CLAW_CORE_RESPONSE_STATUS_OK ||
-            !response->view.text || !response->view.text[0]) {
         return;
     }
 
@@ -946,7 +952,7 @@ static esp_err_t build_iteration_context(const claw_core_request_item_t *request
             goto cleanup;
         }
         context_len = strlen(context.content);
-        ESP_LOGD(TAG,
+        ESP_LOGI(TAG,
                  "context_loaded request=%" PRIu32 " provider=%s context_kind=%s context_len=%u",
                  request->view.request_id,
                  provider->name,

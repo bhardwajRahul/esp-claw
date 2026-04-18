@@ -558,7 +558,6 @@ static esp_err_t cap_skill_register_execute(const char *input_json,
     cJSON *skills = NULL;
     cJSON *skill_id_item = NULL;
     cJSON *file_item = NULL;
-    cJSON *title_item = NULL;
     cJSON *summary_item = NULL;
     cJSON *skill = NULL;
     esp_err_t err;
@@ -573,14 +572,12 @@ static esp_err_t cap_skill_register_execute(const char *input_json,
 
     skill_id_item = cJSON_GetObjectItemCaseSensitive(root, "skill_id");
     file_item = cJSON_GetObjectItemCaseSensitive(root, "file");
-    title_item = cJSON_GetObjectItemCaseSensitive(root, "title");
     summary_item = cJSON_GetObjectItemCaseSensitive(root, "summary");
     if (!cJSON_IsString(skill_id_item) || !skill_id_item->valuestring || !skill_id_item->valuestring[0] ||
             !cJSON_IsString(file_item) || !file_item->valuestring || !file_item->valuestring[0] ||
-            !cJSON_IsString(title_item) || !title_item->valuestring || !title_item->valuestring[0] ||
             !cJSON_IsString(summary_item) || !summary_item->valuestring || !summary_item->valuestring[0]) {
         cJSON_Delete(root);
-        cap_skill_write_error(output, output_size, "skill_id, file, title and summary are required", NULL);
+        cap_skill_write_error(output, output_size, "skill_id, file and summary are required", NULL);
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -642,7 +639,6 @@ static esp_err_t cap_skill_register_execute(const char *input_json,
     }
     cJSON_AddStringToObject(skill, "id", skill_id_item->valuestring);
     cJSON_AddStringToObject(skill, "file", file_item->valuestring);
-    cJSON_AddStringToObject(skill, "title", title_item->valuestring);
     cJSON_AddStringToObject(skill, "summary", summary_item->valuestring);
     cJSON_AddItemToArray(skills, skill);
 
@@ -677,7 +673,6 @@ static esp_err_t cap_skill_register_execute(const char *input_json,
     }
     cJSON_AddStringToObject(skill, "id", skill_id_item->valuestring);
     cJSON_AddStringToObject(skill, "file", file_item->valuestring);
-    cJSON_AddStringToObject(skill, "title", title_item->valuestring);
     cJSON_AddStringToObject(skill, "summary", summary_item->valuestring);
 
     cJSON_Delete(root);
@@ -778,7 +773,7 @@ static const claw_cap_descriptor_t s_skill_descriptors[] = {
         .kind = CLAW_CAP_KIND_CALLABLE,
         .cap_flags = CLAW_CAP_FLAG_CALLABLE_BY_LLM,
         .input_schema_json =
-        "{\"type\":\"object\",\"properties\":{\"skill_id\":{\"type\":\"string\"},\"file\":{\"type\":\"string\"},\"title\":{\"type\":\"string\"},\"summary\":{\"type\":\"string\"}},\"required\":[\"skill_id\",\"file\",\"title\",\"summary\"]}",
+        "{\"type\":\"object\",\"properties\":{\"skill_id\":{\"type\":\"string\"},\"file\":{\"type\":\"string\"},\"summary\":{\"type\":\"string\"}},\"required\":[\"skill_id\",\"file\",\"summary\"]}",
         .execute = cap_skill_register_execute,
     },
     {
