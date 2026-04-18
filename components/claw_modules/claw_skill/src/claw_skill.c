@@ -23,6 +23,14 @@ static const char *SKILLS_LIST_FILE = "skills_list.json";
 #define CLAW_SKILL_DEFAULT_MAX_BYTES 2048
 #define CLAW_SKILL_MAX_PATH          192
 
+#ifdef CONFIG_CLAW_SKILL_DEBUG_LOG
+#define CLAW_SKILL_DIAGE(...) ESP_LOGE(TAG, __VA_ARGS__)
+#define CLAW_SKILL_DIAGI(...) ESP_LOGI(TAG, __VA_ARGS__)
+#else
+#define CLAW_SKILL_DIAGE(...) do { } while (0)
+#define CLAW_SKILL_DIAGI(...) do { } while (0)
+#endif
+
 typedef struct {
     char *id;
     char *file;
@@ -175,12 +183,21 @@ static esp_err_t ensure_dir(const char *path)
     struct stat st = {0};
 
     if (!path || !path[0]) {
+        CLAW_SKILL_DIAGE("ensure_dir: invalid path");
         return ESP_ERR_INVALID_ARG;
     }
     if (stat(path, &st) == 0) {
-        return S_ISDIR(st.st_mode) ? ESP_OK : ESP_FAIL;
+        if (!S_ISDIR(st.st_mode)) {
+            CLAW_SKILL_DIAGE("ensure_dir: path exists but is not a directory: %s", path);
+            return ESP_FAIL;
+        }
+        return ESP_OK;
     }
-    return mkdir(path, 0755) == 0 ? ESP_OK : ESP_FAIL;
+    if (mkdir(path, 0755) != 0) {
+        CLAW_SKILL_DIAGE("ensure_dir: failed to create directory: %s", path);
+        return ESP_FAIL;
+    }
+    return ESP_OK;
 }
 
 static void sanitize_session_id(const char *session_id, char *buf, size_t size)
@@ -248,30 +265,37 @@ static esp_err_t read_file_dup(const char *path, char **out_data)
     size_t read_bytes;
 
     if (!path || !out_data) {
+        CLAW_SKILL_DIAGE("read_file_dup: invalid arguments");
         return ESP_ERR_INVALID_ARG;
     }
     *out_data = NULL;
+    CLAW_SKILL_DIAGI("read %s", path);
 
     file = fopen(path, "rb");
     if (!file) {
+        CLAW_SKILL_DIAGE("read_file_dup: failed to open file: %s", path);
         return ESP_ERR_NOT_FOUND;
     }
     if (fseek(file, 0, SEEK_END) != 0) {
+        CLAW_SKILL_DIAGE("read_file_dup: failed to seek end: %s", path);
         fclose(file);
         return ESP_FAIL;
     }
     size = ftell(file);
     if (size < 0) {
+        CLAW_SKILL_DIAGE("read_file_dup: failed to get file size: %s", path);
         fclose(file);
         return ESP_FAIL;
     }
     if (fseek(file, 0, SEEK_SET) != 0) {
+        CLAW_SKILL_DIAGE("read_file_dup: failed to rewind file: %s", path);
         fclose(file);
         return ESP_FAIL;
     }
 
     data = calloc(1, (size_t)size + 1);
     if (!data) {
+        CLAW_SKILL_DIAGE("read_file_dup: out of memory for file: %s (%ld bytes)", path, size);
         fclose(file);
         return ESP_ERR_NO_MEM;
     }
@@ -288,14 +312,18 @@ static esp_err_t write_file_text(const char *path, const char *text)
     FILE *file = NULL;
 
     if (!path || !text) {
+        CLAW_SKILL_DIAGE("write_file_text: invalid arguments");
         return ESP_ERR_INVALID_ARG;
     }
+    CLAW_SKILL_DIAGI("write %s", path);
 
     file = fopen(path, "wb");
     if (!file) {
+        CLAW_SKILL_DIAGE("write_file_text: failed to open file: %s", path);
         return ESP_FAIL;
     }
     if (fputs(text, file) < 0) {
+        CLAW_SKILL_DIAGE("write_file_text: failed to write file: %s", path);
         fclose(file);
         return ESP_FAIL;
     }
@@ -309,11 +337,14 @@ static esp_err_t read_limited_file(const char *path, char *buf, size_t size)
     size_t n;
 
     if (!path || !buf || size == 0) {
+        CLAW_SKILL_DIAGE("read_limited_file: invalid arguments");
         return ESP_ERR_INVALID_ARG;
     }
+    CLAW_SKILL_DIAGI("read limited %s", path);
 
     file = fopen(path, "rb");
     if (!file) {
+        CLAW_SKILL_DIAGE("read_limited_file: failed to open file: %s", path);
         return ESP_ERR_NOT_FOUND;
     }
     n = fread(buf, 1, size - 1, file);
@@ -455,26 +486,39 @@ static esp_err_t validate_registry_entry(claw_skill_registry_entry_t *entry)
     size_t i;
 
     if (!entry || !entry->id || !entry->file || !entry->summary) {
+        CLAW_SKILL_DIAGE("validate_registry_entry: missing required fields");
         return ESP_ERR_INVALID_ARG;
     }
     if (!skill_path_is_valid(entry->file) || !is_markdown_skill_file(entry->file)) {
+        CLAW_SKILL_DIAGE("validate_registry_entry: invalid skill file path for id=%s file=%s",
+                         entry->id ? entry->id : "(null)",
+                         entry->file ? entry->file : "(null)");
         return ESP_ERR_INVALID_ARG;
     }
     for (i = 0; i < entry->cap_group_count; i++) {
         if (!entry->cap_groups[i] || !entry->cap_groups[i][0]) {
+            CLAW_SKILL_DIAGE("validate_registry_entry: invalid cap_group for id=%s at index=%u",
+                             entry->id ? entry->id : "(null)",
+                             (unsigned)i);
             return ESP_ERR_INVALID_ARG;
         }
     }
 
     path = build_skill_path_dup(entry->file);
     if (!path) {
+        CLAW_SKILL_DIAGE("validate_registry_entry: failed to build skill path for id=%s",
+                         entry->id ? entry->id : "(null)");
         return ESP_ERR_NO_MEM;
     }
     file = fopen(path, "rb");
-    free(path);
     if (!file) {
+        CLAW_SKILL_DIAGE("validate_registry_entry: missing markdown file for id=%s path=%s",
+                         entry->id ? entry->id : "(null)",
+                         path);
+        free(path);
         return ESP_ERR_NOT_FOUND;
     }
+    free(path);
     fclose(file);
     return ESP_OK;
 }
@@ -493,36 +537,44 @@ static esp_err_t load_registry_from_json(void)
 
     path = build_skill_path_dup(SKILLS_LIST_FILE);
     if (!path) {
+        ESP_LOGE(TAG, "registry path alloc failed");
         return ESP_ERR_NO_MEM;
     }
+    CLAW_SKILL_DIAGI("load registry %s", path);
 
     err = read_file_dup(path, &json_text);
-    free(path);
     if (err != ESP_OK) {
+        ESP_LOGE(TAG, "read %s: %s", path, esp_err_to_name(err));
+        free(path);
         return err;
     }
+    free(path);
 
     root = cJSON_Parse(json_text);
     free(json_text);
     if (!root || !cJSON_IsObject(root)) {
+        ESP_LOGE(TAG, "bad %s", SKILLS_LIST_FILE);
         cJSON_Delete(root);
         return ESP_ERR_INVALID_STATE;
     }
 
     skills = cJSON_GetObjectItemCaseSensitive(root, "skills");
     if (!cJSON_IsArray(skills)) {
+        ESP_LOGE(TAG, "bad skills array");
         err = ESP_ERR_INVALID_ARG;
         goto cleanup;
     }
 
     entry_count = (size_t)cJSON_GetArraySize(skills);
     if (entry_count == 0 || entry_count > s_skill.max_skill_files) {
+        ESP_LOGE(TAG, "bad skill count %u/%u", (unsigned)entry_count, (unsigned)s_skill.max_skill_files);
         err = ESP_ERR_INVALID_ARG;
         goto cleanup;
     }
 
     entries = calloc(entry_count, sizeof(*entries));
     if (!entries) {
+        ESP_LOGE(TAG, "registry alloc %u", (unsigned)entry_count);
         err = ESP_ERR_NO_MEM;
         goto cleanup;
     }
@@ -532,6 +584,7 @@ static esp_err_t load_registry_from_json(void)
         size_t i;
 
         if (!cJSON_IsObject(skill) || entry_index >= entry_count) {
+            ESP_LOGE(TAG, "bad skill entry #%u", (unsigned)entry_index);
             err = ESP_ERR_INVALID_ARG;
             goto cleanup;
         }
@@ -554,11 +607,13 @@ static esp_err_t load_registry_from_json(void)
             err = validate_registry_entry(entry);
         }
         if (err != ESP_OK) {
+            ESP_LOGE(TAG, "skill #%u (%s): %s", (unsigned)entry_index, entry->id ? entry->id : "(unknown)", esp_err_to_name(err));
             goto cleanup;
         }
 
         for (i = 0; i < entry_index; i++) {
             if (strcmp(entries[i].id, entry->id) == 0) {
+                ESP_LOGE(TAG, "duplicate skill %s", entry->id);
                 err = ESP_ERR_INVALID_ARG;
                 goto cleanup;
             }
@@ -585,14 +640,20 @@ static esp_err_t claw_skill_read_document(const claw_skill_registry_entry_t *ent
     esp_err_t err;
 
     if (!entry || !buf || size == 0) {
+        ESP_LOGE(TAG, "read doc: bad arg");
         return ESP_ERR_INVALID_ARG;
     }
 
     path = build_skill_path_dup(entry->file);
     if (!path) {
+        ESP_LOGE(TAG, "read doc %s: no path", entry->id ? entry->id : "(null)");
         return ESP_ERR_NO_MEM;
     }
+    CLAW_SKILL_DIAGI("read doc %s", entry->id ? entry->id : "(null)");
     err = read_limited_file(path, buf, size);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "read doc %s: %s", entry->id ? entry->id : "(null)", esp_err_to_name(err));
+    }
     free(path);
     return err;
 }
@@ -610,29 +671,36 @@ static esp_err_t load_active_skill_ids_from_disk(const char *session_id,
     esp_err_t err;
 
     if (!out_skill_ids || !out_skill_count) {
+        ESP_LOGE(TAG, "load active: bad arg");
         return ESP_ERR_INVALID_ARG;
     }
     *out_skill_ids = NULL;
     *out_skill_count = 0;
 
     if (!s_skill.initialized || !session_id || !session_id[0]) {
+        ESP_LOGE(TAG, "load active: bad state");
         return ESP_ERR_INVALID_STATE;
     }
 
     path = build_session_state_path_dup(session_id);
     if (!path) {
+        ESP_LOGE(TAG, "session path %s", session_id ? session_id : "(null)");
         return ESP_ERR_INVALID_ARG;
     }
+    CLAW_SKILL_DIAGI("load active %s", session_id);
 
     err = read_file_dup(path, &json_text);
-    free(path);
     if (err != ESP_OK) {
+        ESP_LOGE(TAG, "read session %s: %s", session_id, esp_err_to_name(err));
+        free(path);
         return err;
     }
+    free(path);
 
     root = cJSON_Parse(json_text);
     free(json_text);
     if (!cJSON_IsArray(root)) {
+        ESP_LOGE(TAG, "bad session json %s", session_id);
         cJSON_Delete(root);
         return ESP_ERR_INVALID_STATE;
     }
@@ -648,6 +716,7 @@ static esp_err_t load_active_skill_ids_from_disk(const char *session_id,
         }
         err = push_unique_string(&loaded, &loaded_count, item->valuestring);
         if (err != ESP_OK) {
+            ESP_LOGE(TAG, "store skill %s: %s", item->valuestring, esp_err_to_name(err));
             free_string_array(loaded, loaded_count);
             cJSON_Delete(root);
             return err;
@@ -676,13 +745,16 @@ static esp_err_t save_active_skill_ids_to_disk(const char *session_id,
     size_t i;
 
     if (!s_skill.initialized || !session_id || !session_id[0]) {
+        ESP_LOGE(TAG, "save active: bad state");
         return ESP_ERR_INVALID_STATE;
     }
 
     path = build_session_state_path_dup(session_id);
     if (!path) {
+        ESP_LOGE(TAG, "session path %s", session_id ? session_id : "(null)");
         return ESP_ERR_INVALID_ARG;
     }
+    CLAW_SKILL_DIAGI("save active %s (%u)", session_id, (unsigned)skill_count);
 
     if (skill_count == 0) {
         remove(path);
@@ -692,6 +764,7 @@ static esp_err_t save_active_skill_ids_to_disk(const char *session_id,
 
     root = cJSON_CreateArray();
     if (!root) {
+        ESP_LOGE(TAG, "session array alloc %s", session_id);
         free(path);
         return ESP_ERR_NO_MEM;
     }
@@ -704,6 +777,7 @@ static esp_err_t save_active_skill_ids_to_disk(const char *session_id,
         }
         item = cJSON_CreateString(skill_ids[i]);
         if (!item) {
+            ESP_LOGE(TAG, "skill item alloc %s", skill_ids[i]);
             err = ESP_ERR_NO_MEM;
             goto cleanup;
         }
@@ -712,11 +786,15 @@ static esp_err_t save_active_skill_ids_to_disk(const char *session_id,
 
     json_text = cJSON_PrintUnformatted(root);
     if (!json_text) {
+        ESP_LOGE(TAG, "session encode %s", session_id);
         err = ESP_ERR_NO_MEM;
         goto cleanup;
     }
 
     err = write_file_text(path, json_text);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "write session %s: %s", session_id, esp_err_to_name(err));
+    }
 
 cleanup:
     free(path);
@@ -799,6 +877,7 @@ esp_err_t claw_skill_init(const claw_skill_config_t *config)
     esp_err_t err;
 
     if (!config || !config->skills_root_dir || !config->session_state_root_dir) {
+        ESP_LOGE(TAG, "init: bad config");
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -812,12 +891,14 @@ esp_err_t claw_skill_init(const claw_skill_config_t *config)
 
     err = ensure_dir(s_skill.session_state_root_dir);
     if (err != ESP_OK) {
+        ESP_LOGE(TAG, "init dir %s: %s", s_skill.session_state_root_dir, esp_err_to_name(err));
         claw_skill_reset();
         return err;
     }
 
     err = load_registry_from_json();
     if (err != ESP_OK) {
+        ESP_LOGE(TAG, "init registry: %s", esp_err_to_name(err));
         claw_skill_reset();
         return err;
     }
@@ -834,6 +915,7 @@ esp_err_t claw_skill_reload_registry(void)
     esp_err_t err;
 
     if (!s_skill.initialized) {
+        ESP_LOGE(TAG, "reload before init");
         return ESP_ERR_INVALID_STATE;
     }
 
@@ -851,6 +933,7 @@ esp_err_t claw_skill_reload_registry(void)
 
     s_skill.entries = old_entries;
     s_skill.entry_count = old_count;
+    ESP_LOGE(TAG, "reload registry: %s", esp_err_to_name(err));
     return err;
 }
 
