@@ -30,6 +30,12 @@ static const char *TAG = "cap_system";
 #define CAP_SYSTEM_RESTART_TASK_PRIORITY      5
 #define CAP_SYSTEM_RESTART_DEFAULT_DELAY_MS 500
 
+#ifdef CONFIG_CLAW_CAP_SYSTEM_DEBUG_LOGS
+#define CAP_SYSTEM_DEBUG_LOG(label, text) ESP_LOGI(TAG, "%s: %s", label, text)
+#else
+#define CAP_SYSTEM_DEBUG_LOG(label, text) do { (void)(label); (void)(text); } while (0)
+#endif
+
 typedef struct {
     uint32_t delay_ms;
 } cap_system_restart_task_args_t;
@@ -65,11 +71,13 @@ static esp_err_t cap_system_render_json(cJSON *root, char *output, size_t output
     char *rendered = NULL;
 
     if (!root || !output || output_size == 0) {
+        ESP_LOGE(TAG, "render json: invalid arg");
         return ESP_ERR_INVALID_ARG;
     }
 
     rendered = cJSON_PrintUnformatted(root);
     if (!rendered) {
+        ESP_LOGE(TAG, "render json: no mem");
         return ESP_ERR_NO_MEM;
     }
 
@@ -84,6 +92,7 @@ static cJSON *cap_system_build_memory_json(void)
     size_t psram_total = 0;
 
     if (!root) {
+        ESP_LOGE(TAG, "memory json: create failed");
         return NULL;
     }
 
@@ -112,11 +121,13 @@ static esp_err_t cap_system_get_sta_ip_info(esp_netif_ip_info_t *ip_info)
     esp_netif_t *netif = NULL;
 
     if (!ip_info) {
+        ESP_LOGE(TAG, "sta ip: invalid arg");
         return ESP_ERR_INVALID_ARG;
     }
 
     netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
     if (!netif) {
+        ESP_LOGE(TAG, "sta ip: netif not found");
         return ESP_ERR_NOT_FOUND;
     }
 
@@ -133,11 +144,15 @@ static cJSON *cap_system_build_ip_json(void)
     char gateway_buf[16];
 
     if (!root) {
+        ESP_LOGE(TAG, "ip json: create failed");
         return NULL;
     }
 
     err = cap_system_get_sta_ip_info(&ip_info);
     if (err != ESP_OK || ip_info.ip.addr == 0) {
+        if (err != ESP_OK) {
+            ESP_LOGW(TAG, "ip info unavailable: %s", esp_err_to_name(err));
+        }
         cJSON_AddBoolToObject(root, "connected", false);
         cJSON_AddNullToObject(root, "ip");
         cJSON_AddNullToObject(root, "netmask");
@@ -166,11 +181,13 @@ static cJSON *cap_system_build_wifi_json(void)
     char bssid_buf[18];
 
     if (!root) {
+        ESP_LOGE(TAG, "wifi json: create failed");
         return NULL;
     }
 
     err = esp_wifi_sta_get_ap_info(&ap_info);
     if (err != ESP_OK) {
+        ESP_LOGW(TAG, "wifi ap info failed: %s", esp_err_to_name(err));
         cJSON_AddBoolToObject(root, "connected", false);
         cJSON_AddStringToObject(root, "status", "disconnected");
         return root;
@@ -197,6 +214,8 @@ static cJSON *cap_system_build_wifi_json(void)
     if (esp_wifi_get_channel(&primary, &second) == ESP_OK) {
         cJSON_AddNumberToObject(root, "primary_channel", primary);
         cJSON_AddNumberToObject(root, "second_channel", second);
+    } else {
+        ESP_LOGW(TAG, "wifi channel failed");
     }
 
     return root;
@@ -207,6 +226,7 @@ static cJSON *cap_system_build_cpu_json(void)
     cJSON *root = cJSON_CreateObject();
 
     if (!root) {
+        ESP_LOGE(TAG, "cpu json: create failed");
         return NULL;
     }
 
@@ -220,6 +240,7 @@ static cJSON *cap_system_build_cpu_json(void)
 
     tasks = calloc((size_t)task_count + 4, sizeof(TaskStatus_t));
     if (!tasks) {
+        ESP_LOGE(TAG, "cpu stats: no mem");
         cJSON_Delete(root);
         return NULL;
     }
@@ -263,6 +284,7 @@ static cJSON *cap_system_build_info_json(void)
     esp_chip_info_t chip_info = {0};
 
     if (!root) {
+        ESP_LOGE(TAG, "system json: create failed");
         return NULL;
     }
 
@@ -284,16 +306,21 @@ static esp_err_t cap_system_write_json(cJSON *(*builder)(void), char *output, si
     esp_err_t err;
 
     if (!builder || !output || output_size == 0) {
+        ESP_LOGE(TAG, "write json: invalid arg");
         return ESP_ERR_INVALID_ARG;
     }
 
     root = builder();
     if (!root) {
+        ESP_LOGE(TAG, "write json: build failed");
         return ESP_ERR_NO_MEM;
     }
 
     err = cap_system_render_json(root, output, output_size);
     cJSON_Delete(root);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "write json failed: %s", esp_err_to_name(err));
+    }
     return err;
 }
 
@@ -309,27 +336,57 @@ static void cap_system_restart_task(void *arg)
 
 static esp_err_t cap_system_get_info_json(char *output, size_t output_size)
 {
-    return cap_system_write_json(cap_system_build_info_json, output, output_size);
+    esp_err_t err = cap_system_write_json(cap_system_build_info_json, output, output_size);
+
+    if (err == ESP_OK) {
+        CAP_SYSTEM_DEBUG_LOG("system_info", output);
+    }
+
+    return err;
 }
 
 static esp_err_t cap_system_get_memory_info_json(char *output, size_t output_size)
 {
-    return cap_system_write_json(cap_system_build_memory_json, output, output_size);
+    esp_err_t err = cap_system_write_json(cap_system_build_memory_json, output, output_size);
+
+    if (err == ESP_OK) {
+        CAP_SYSTEM_DEBUG_LOG("memory_info", output);
+    }
+
+    return err;
 }
 
 static esp_err_t cap_system_get_cpu_info_json(char *output, size_t output_size)
 {
-    return cap_system_write_json(cap_system_build_cpu_json, output, output_size);
+    esp_err_t err = cap_system_write_json(cap_system_build_cpu_json, output, output_size);
+
+    if (err == ESP_OK) {
+        CAP_SYSTEM_DEBUG_LOG("cpu_info", output);
+    }
+
+    return err;
 }
 
 static esp_err_t cap_system_get_wifi_info_json(char *output, size_t output_size)
 {
-    return cap_system_write_json(cap_system_build_wifi_json, output, output_size);
+    esp_err_t err = cap_system_write_json(cap_system_build_wifi_json, output, output_size);
+
+    if (err == ESP_OK) {
+        CAP_SYSTEM_DEBUG_LOG("wifi_info", output);
+    }
+
+    return err;
 }
 
 static esp_err_t cap_system_get_ip_info_json(char *output, size_t output_size)
 {
-    return cap_system_write_json(cap_system_build_ip_json, output, output_size);
+    esp_err_t err = cap_system_write_json(cap_system_build_ip_json, output, output_size);
+
+    if (err == ESP_OK) {
+        CAP_SYSTEM_DEBUG_LOG("ip_info", output);
+    }
+
+    return err;
 }
 
 static esp_err_t cap_system_restart_async(uint32_t delay_ms)
@@ -343,6 +400,7 @@ static esp_err_t cap_system_restart_async(uint32_t delay_ms)
 
     task_args = calloc(1, sizeof(*task_args));
     if (!task_args) {
+        ESP_LOGE(TAG, "restart args: no mem");
         return ESP_ERR_NO_MEM;
     }
     task_args->delay_ms = delay_ms;
@@ -356,6 +414,7 @@ static esp_err_t cap_system_restart_async(uint32_t delay_ms)
                      NULL);
     if (ok != pdPASS) {
         free(task_args);
+        ESP_LOGE(TAG, "restart task create failed");
         return ESP_ERR_NO_MEM;
     }
 
@@ -426,12 +485,14 @@ static esp_err_t cap_system_execute_restart(const char *input_json,
     (void)ctx;
 
     if (!output || output_size == 0) {
+        ESP_LOGE(TAG, "restart cmd: invalid output");
         return ESP_ERR_INVALID_ARG;
     }
 
     if (input_json && input_json[0]) {
         input = cJSON_Parse(input_json);
         if (!input || !cJSON_IsObject(input)) {
+            ESP_LOGE(TAG, "restart cmd: invalid json");
             cJSON_Delete(input);
             snprintf(output, output_size, "{\"ok\":false,\"error\":\"invalid input json\"}");
             return ESP_ERR_INVALID_ARG;
@@ -446,6 +507,7 @@ static esp_err_t cap_system_execute_restart(const char *input_json,
     err = cap_system_restart_async(delay_ms);
     cJSON_Delete(input);
     if (err != ESP_OK) {
+        ESP_LOGE(TAG, "restart schedule failed: %s", esp_err_to_name(err));
         snprintf(output,
                  output_size,
                  "{\"ok\":false,\"error\":\"failed to schedule restart\",\"code\":\"%s\"}",
@@ -465,7 +527,7 @@ static const claw_cap_descriptor_t s_system_descriptors[] = {
         .id = "get_system_info",
         .name = "get_system_info",
         .family = "system",
-        .description = "Get system summary including memory, CPU, Wi-Fi, IP, chip, and uptime information.",
+        .description = "Get system or device summary including memory, CPU, Wi-Fi, IP, chip, and uptime information. **You cannot speculate or fabricate information.**",
         .kind = CLAW_CAP_KIND_CALLABLE,
         .cap_flags = CLAW_CAP_FLAG_CALLABLE_BY_LLM,
         .input_schema_json = "{\"type\":\"object\",\"properties\":{}}",
@@ -495,7 +557,7 @@ static const claw_cap_descriptor_t s_system_descriptors[] = {
         .id = "get_wifi_info",
         .name = "get_wifi_info",
         .family = "system",
-        .description = "Get current Wi-Fi connection details such as SSID, RSSI, and channel.",
+        .description = "Get current Wi-Fi connection details such as SSID(name), RSSI, and channel.",
         .kind = CLAW_CAP_KIND_CALLABLE,
         .cap_flags = CLAW_CAP_FLAG_CALLABLE_BY_LLM,
         .input_schema_json = "{\"type\":\"object\",\"properties\":{}}",
@@ -535,5 +597,10 @@ esp_err_t cap_system_register_group(void)
         return ESP_OK;
     }
 
-    return claw_cap_register_group(&s_system_group);
+    esp_err_t err = claw_cap_register_group(&s_system_group);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "register group failed: %s", esp_err_to_name(err));
+    }
+
+    return err;
 }
