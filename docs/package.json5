@@ -8,7 +8,8 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "check:doc-lines": "node ./tools/check-doc-line-alignment.ts"
+    "check:doc-lines": "node ./tools/check-doc-line-alignment.ts",
+    "generate-firmware-json": "node ./tools/generate-firmware-json.ts"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.8",

@@ -202,7 +202,7 @@ const en: Strings = {
 
 const zhCn: Strings = {
   pageTitle: "在线烧录",
-  pageSubtitle: "连接支持的 ESP 开发版，直接在浏览器中烧录 ESP-Claw 固件。",
+  pageSubtitle: "连接支持的 ESP 开发板，直接在浏览器中烧录 ESP-Claw 固件。",
 
   tabLockedWhileFlashing: "烧录结束后可切换到控制台",
   connectBtn: "连接",
@@ -289,8 +289,8 @@ const zhCn: Strings = {
   progressLabel: "进度",
 
   quickLinkNoHardwareTitle: "还没有硬件？",
-  quickLinkNoHardwareDesc: "组装 ESP-Claw 开发版",
-  quickLinkBoardsTitle: "有其他 ESP 开发版？",
+  quickLinkNoHardwareDesc: "组装 ESP-Claw 开发板",
+  quickLinkBoardsTitle: "有其他 ESP 开发板？",
   quickLinkBoardsDesc: "查看支持的开发板列表",
 };
 

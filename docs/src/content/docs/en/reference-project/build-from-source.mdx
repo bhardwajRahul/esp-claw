@@ -25,10 +25,13 @@ import { Steps, Aside, Badge } from '@astrojs/starlight/components';
    pip install esp-bmgr-assist
    ```
 
-   <Aside type="tip">
-      ESP-Claw uses ESP Board Manager to support multiple development boards.
+   <Aside title="Need to adapt a new development board?" type="tip">
+    ESP-Claw uses ESP Board Manager to support multiple development boards.
 
-      To add other boards, see the [ESP Board Manager component](https://components.espressif.com/components/espressif/esp_board_manager/).
+    To add other boards, see the [ESP Board Manager component](https://github.com/espressif/esp-gmf/blob/main/packages/esp_board_manager/docs/how_to_customize_board.md),
+    and put the board adaptation files in [`application/basic_demo/boards`](https://github.com/espressif/esp-claw/tree/master/application/basic_demo/boards).
+
+    Welcome to submit the board adaptation code to the ESP-Claw repository via Pull Request.
    </Aside>
 
 2. **Get the ESP-Claw source**
