@@ -8,6 +8,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -214,6 +215,63 @@ static esp_err_t cap_files_list_recursive(const char *dir_path,
     return ESP_OK;
 }
 
+static esp_err_t cap_files_copy_file_internal(const char *src_path, const char *dst_path)
+{
+    FILE *src = NULL;
+    FILE *dst = NULL;
+    uint8_t buffer[1024];
+    struct stat st = {0};
+    esp_err_t err = ESP_OK;
+
+    if (!cap_files_path_is_valid(src_path) || !cap_files_path_is_valid(dst_path)) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (strcmp(src_path, dst_path) == 0) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (stat(src_path, &st) != 0 || !S_ISREG(st.st_mode)) {
+        return ESP_ERR_NOT_FOUND;
+    }
+
+    if (cap_files_ensure_parent_dirs(dst_path) != ESP_OK) {
+        return ESP_FAIL;
+    }
+
+    src = fopen(src_path, "rb");
+    if (!src) {
+        return ESP_FAIL;
+    }
+
+    dst = fopen(dst_path, "wb");
+    if (!dst) {
+        fclose(src);
+        return ESP_FAIL;
+    }
+
+    while (!feof(src)) {
+        size_t read_size = fread(buffer, 1, sizeof(buffer), src);
+
+        if (read_size > 0 && fwrite(buffer, 1, read_size, dst) != read_size) {
+            err = ESP_FAIL;
+            break;
+        }
+        if (ferror(src)) {
+            err = ESP_FAIL;
+            break;
+        }
+    }
+
+    fclose(dst);
+    fclose(src);
+
+    if (err != ESP_OK) {
+        unlink(dst_path);
+    }
+
+    return err;
+}
+
 static esp_err_t cap_files_read_file_execute(const char *input_json,
                                              const claw_cap_call_context_t *ctx,
                                              char *output,
@@ -366,6 +424,122 @@ static esp_err_t cap_files_delete_file_execute(const char *input_json,
     return ESP_OK;
 }
 
+static esp_err_t cap_files_copy_file_execute(const char *input_json,
+                                             const claw_cap_call_context_t *ctx,
+                                             char *output,
+                                             size_t output_size)
+{
+    cJSON *root = NULL;
+    const char *src_path = NULL;
+    const char *dst_path = NULL;
+    char resolved_src_path[256];
+    char resolved_dst_path[256];
+    esp_err_t err;
+
+    (void)ctx;
+
+    root = cJSON_Parse(input_json);
+    if (!root) {
+        snprintf(output, output_size, "Error: invalid JSON input");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    src_path = cJSON_GetStringValue(cJSON_GetObjectItem(root, "src_path"));
+    dst_path = cJSON_GetStringValue(cJSON_GetObjectItem(root, "dst_path"));
+    if (cap_files_resolve_path(src_path, resolved_src_path, sizeof(resolved_src_path)) != ESP_OK
+        || cap_files_resolve_path(dst_path, resolved_dst_path, sizeof(resolved_dst_path)) != ESP_OK) {
+        cJSON_Delete(root);
+        snprintf(output, output_size, "Error: source and destination must stay under %s", s_files_base_dir);
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (strcmp(resolved_src_path, resolved_dst_path) == 0) {
+        cJSON_Delete(root);
+        snprintf(output, output_size, "Error: source and destination must be different");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    err = cap_files_copy_file_internal(resolved_src_path, resolved_dst_path);
+    cJSON_Delete(root);
+    if (err == ESP_ERR_NOT_FOUND) {
+        snprintf(output, output_size, "Error: file not found: %s", resolved_src_path);
+        return err;
+    }
+    if (err != ESP_OK) {
+        snprintf(output, output_size, "Error: failed to copy %s to %s", resolved_src_path, resolved_dst_path);
+        return err;
+    }
+
+    snprintf(output, output_size, "OK: copied %s to %s", resolved_src_path, resolved_dst_path);
+    return ESP_OK;
+}
+
+static esp_err_t cap_files_move_file_execute(const char *input_json,
+                                             const claw_cap_call_context_t *ctx,
+                                             char *output,
+                                             size_t output_size)
+{
+    cJSON *root = NULL;
+    const char *src_path = NULL;
+    const char *dst_path = NULL;
+    char resolved_src_path[256];
+    char resolved_dst_path[256];
+    struct stat st = {0};
+
+    (void)ctx;
+
+    root = cJSON_Parse(input_json);
+    if (!root) {
+        snprintf(output, output_size, "Error: invalid JSON input");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    src_path = cJSON_GetStringValue(cJSON_GetObjectItem(root, "src_path"));
+    dst_path = cJSON_GetStringValue(cJSON_GetObjectItem(root, "dst_path"));
+    if (cap_files_resolve_path(src_path, resolved_src_path, sizeof(resolved_src_path)) != ESP_OK
+        || cap_files_resolve_path(dst_path, resolved_dst_path, sizeof(resolved_dst_path)) != ESP_OK) {
+        cJSON_Delete(root);
+        snprintf(output, output_size, "Error: source and destination must stay under %s", s_files_base_dir);
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (strcmp(resolved_src_path, resolved_dst_path) == 0) {
+        cJSON_Delete(root);
+        snprintf(output, output_size, "Error: source and destination must be different");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (stat(resolved_src_path, &st) != 0 || !S_ISREG(st.st_mode)) {
+        cJSON_Delete(root);
+        snprintf(output, output_size, "Error: file not found: %s", resolved_src_path);
+        return ESP_ERR_NOT_FOUND;
+    }
+
+    if (cap_files_ensure_parent_dirs(resolved_dst_path) != ESP_OK) {
+        cJSON_Delete(root);
+        snprintf(output, output_size, "Error: failed to create parent directories for %s", resolved_dst_path);
+        return ESP_FAIL;
+    }
+
+    if (rename(resolved_src_path, resolved_dst_path) != 0) {
+        esp_err_t err = cap_files_copy_file_internal(resolved_src_path, resolved_dst_path);
+
+        if (err != ESP_OK) {
+            cJSON_Delete(root);
+            snprintf(output, output_size, "Error: failed to move %s to %s", resolved_src_path, resolved_dst_path);
+            return err;
+        }
+        if (unlink(resolved_src_path) != 0) {
+            unlink(resolved_dst_path);
+            cJSON_Delete(root);
+            snprintf(output, output_size, "Error: failed to remove source after moving: %s", resolved_src_path);
+            return ESP_FAIL;
+        }
+    }
+
+    cJSON_Delete(root);
+    snprintf(output, output_size, "OK: moved %s to %s", resolved_src_path, resolved_dst_path);
+    return ESP_OK;
+}
+
 static esp_err_t cap_files_list_dir_execute(const char *input_json,
                                             const claw_cap_call_context_t *ctx,
                                             char *output,
@@ -445,6 +619,26 @@ static const claw_cap_descriptor_t s_files_descriptors[] = {
         .cap_flags = CLAW_CAP_FLAG_CALLABLE_BY_LLM,
         .input_schema_json = "{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"}},\"required\":[\"path\"]}",
         .execute = cap_files_delete_file_execute,
+    },
+    {
+        .id = "copy_file",
+        .name = "copy_file",
+        .family = "files",
+        .description = "Copy a file.",
+        .kind = CLAW_CAP_KIND_CALLABLE,
+        .cap_flags = CLAW_CAP_FLAG_CALLABLE_BY_LLM,
+        .input_schema_json = "{\"type\":\"object\",\"properties\":{\"src_path\":{\"type\":\"string\"},\"dst_path\":{\"type\":\"string\"}},\"required\":[\"src_path\",\"dst_path\"]}",
+        .execute = cap_files_copy_file_execute,
+    },
+    {
+        .id = "move_file",
+        .name = "move_file",
+        .family = "files",
+        .description = "Move a file.",
+        .kind = CLAW_CAP_KIND_CALLABLE,
+        .cap_flags = CLAW_CAP_FLAG_CALLABLE_BY_LLM,
+        .input_schema_json = "{\"type\":\"object\",\"properties\":{\"src_path\":{\"type\":\"string\"},\"dst_path\":{\"type\":\"string\"}},\"required\":[\"src_path\",\"dst_path\"]}",
+        .execute = cap_files_move_file_execute,
     },
     {
         .id = "list_dir",
